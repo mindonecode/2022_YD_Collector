@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org/DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="Weather">
+
+	<!-- select -->
+	<select id="db_conn_check" resultType="Integer">
+        select 1
+	</select>
+
+	<!-- merge godt_wthr_prcs_stts -->
+	<update id="merge_godt_wthr_prcs_stts" parameterType="mone.db.dto.PostgresResDTO$WeatherApi">
+		with TEMP as
+		(
+			update st_intelligent_schema.kma_api_clct_stus set
+				prcs_stts_cd = #{prcsSttsCd}
+			where
+				recd_dt =  to_timestamp(#{clctDt}, 'YYYY-MM-DD HH24:MI:SS.MS.MS')
+				returning *
+		)
+		insert into st_intelligent_schema.kma_api_clct_stus
+		(
+			recd_dt, prcs_stts_cd
+		)
+		select
+			now(), #{prcsSttsCd}
+		where not exists(select * from TEMP)
+	</update>
+
+	<!-- insert syst_mngm_agt_stt -->
+	<insert id="insert_syst_mngm_agt_stt" parameterType="mone.db.dto.PostgresResDTO$WeatherApi">
+		insert into st_intelligent_schema.clctr_stus_mntrg (
+			recd_dt, procs_sttus_cd
+		) values (
+			now(), #{procsSttusCd}
+		)
+	</insert>
+
+	<!-- 초단기예보 요청 파라미터 정보 -->
+	<select id="select_ultrasrtfcst" resultType="mone.db.dto.UltraSrtFcstReqDTO">
+		select 	godt_wthr_wz_id as region_area_cd,
+				ara_xcnts as nx,
+				ara_ydnts as ny
+			from st_intelligent_schema.kma_ara_xcnts_ydnts
+		where godt_wthr_wz_id = '4374025000'
+	</select>
+
+
+	<!-- 초단기실황 요청 파라미터 정보 -->
+	<select id="select_ultrasrtncst" resultType="mone.db.dto.UltraSrtNcstReqDTO">
+		select 	godt_wthr_wz_id as region_area_cd,
+				ara_xcnts as nx,
+				ara_ydnts as ny
+			from st_intelligent_schema.kma_ara_xcnts_ydnts
+		where godt_wthr_wz_id = '4374025000'
+	</select>
+
+	<!-- 초단기실황 정보 추가 -->
+	<insert id="insertall_ultrasrtncst" parameterType="java.util.Map">
+		INSERT INTO st_intelligent_schema.kma_srtpd_actl
+		(ara_cd, tmprt, per_hr_prcpt_vol, hd, wind_drc, wind_ve, prcpt_type, clct_dt) VALUES
+		<foreach collection="resultList" item="col" index="index" separator=",">
+		  (
+				  #{col.regionAreaCd}
+				, #{col.t1h}
+				, #{col.rn1}
+				, #{col.reh}
+				, #{col.vec}
+				, #{col.wsd}
+				, #{col.pty}
+				, to_timestamp(#{col.reqDate}, 'YYYY-MM-DD HH24:MI:SS.MS')
+			)
+		</foreach>
+	</insert>
+
+	<!-- 초단기실황 정보 추가 -->
+	<insert id="insertall_ultrasrtfcst" parameterType="java.util.Map">
+
+		with TEMP as
+		(
+			update st_intelligent_schema.kma_srtpd_actl set
+
+				clct_dt =  to_timestamp(#{reqDate}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				<if test=" t1h != '' and  t1h !=null " >
+				,  tmprt			= #{t1h}
+				</if>
+				<if test=" rn1 != '' and  rn1 !=null  " >
+				, per_hr_prcpt_vol  = #{rn1}
+				</if>
+				<if test=" reh != '' and  reh !=null  " >
+				, hd       			= #{reh}
+				</if>
+				<if test=" vec != '' and  vec !=null  " >
+				, wind_drc       	= #{vec}
+				</if>
+				<if test=" wsd != '' and  wsd !=null  " >
+				, wind_ve       	= #{wsd}
+				</if>
+				<if test=" pty != '' and  pty !=null  " >
+				, prcpt_type       	= #{pty}
+				</if>
+				<if test=" sky != '' and  sky !=null  " >
+				, sky_stus       	= #{sky}
+				</if>
+				<if test=" lgt != '' and  lgt !=null  " >
+				, thndblt       	= #{lgt}
+				</if>
+			where
+				frcst_dt =  to_timestamp(#{fcstClct}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				returning *
+		)
+		insert into st_intelligent_schema.kma_srtpd_actl
+		(
+			ara_cd
+			, tmprt
+			, per_hr_prcpt_vol
+			, hd
+			, wind_drc
+			, wind_ve
+			, prcpt_type
+			, clct_dt
+			, sky_stus
+			, thndblt
+			, frcst_dt
+		)
+		select
+			    #{regionAreaCd}
+               ,#{t1h}
+               ,#{rn1}
+               ,#{reh}
+               ,#{vec}
+               ,#{wsd}
+               ,#{pty}
+               ,to_timestamp(#{reqDate}, 'YYYY-MM-DD HH24:MI:SS.MS')
+               ,#{sky}
+               ,#{lgt}
+               ,to_timestamp(#{fcstClct}, 'YYYY-MM-DD HH24:MI:SS.MS')
+		where not exists(select * from TEMP)
+
+	</insert>
+
+
+	<!-- 특보코드조회 정보 추가 -->
+	<insert id="mergeall_pwncd" parameterType="java.util.Map">
+
+		INSERT INTO st_intelligent_schema.godt_wthr_spcnws
+			( snz_id
+			, presnatn_no
+			, presnatn_dt
+			, spcnws_se_code
+			, eff_dt
+			, spcnws_ty_code
+			, spcnws_level_code
+			, recd_dt
+			, relis_dt)
+
+			<foreach collection="resultList" item="col" open="" close="" separator="union">
+				select
+					  #{col.areaCd} as SNZ_ID
+					, #{col.tmSeq} as PRESNATN_NO
+					, to_timestamp(#{col.tmFc}, 'YYYY-MM-DD HH24:MI:SS.MS') as PRESNATN_DT
+					, LPAD(#{col.command}, 3, '0') as  SPCNWS_SE_CODE
+					,<choose>
+						<when test="col.startTime == 0">null</when>
+						<otherwise>to_timestamp(#{col.startTime}, 'YYYY-MM-DD HH24:MI:SS.MS')</otherwise>
+					</choose> as EFF_DT
+					, LPAD(#{col.warnType}, 3, '0') as SPCNWS_TY_CODE
+					, LPAD(#{col.warnStress}, 3, '0') as SPCNWS_LEVEL_CODE
+					to_timestamp(#{col.reqDate} || #{col.reqTime}, 'YYYY-MM-DD HH24:MI:SS.MS') as recd_dt
+					,<choose>
+						<when test="col.endTime == 0">null</when>
+						<otherwise>to_timestamp(#{col.endTime}, 'YYYY-MM-DD HH24:MI:SS.MS')</otherwise>
+					</choose> as RELIS_DT
+			</foreach>
+
+		ON CONFLICT (snz_id, presnatn_no, spcnws_se_code)
+		DO UPDATE
+		SET recd_dt = to_timestamp(#{col.reqDate} || #{col.reqTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+
+	</insert>
+
+	<!-- 특보코드조회 정보 추가 -->
+	<insert id="insertall_pwncd" parameterType="java.util.Map">
+		insert all
+		<foreach collection="resultList" item="col" index="index">
+			<!-- into TEMP_TBL_PWNCD values (
+				#{col.reqDate}, #{col.reqTime},
+				#{col.areaCd}, #{col.area}, #{col.areaNm}, #{col.fromTmFc}, #{col.toTmFc},
+				#{col.warnType}, #{col.stnId}, #{col.tmFc}, #{col.tmSeq}, #{col.warnStress}, #{col.command}, #{col.startTime}, #{col.endTime}, #{col.allEndTime}, #{col.cancel}
+			) -->
+
+			into godt_wthr_spcnws values (
+				, #{col.areaCd}
+				, #{col.tmSeq}
+				, to_timestamp(#{col.tmFc}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				, LPAD(#{col.command}, 3, '0')
+				,<choose>
+					<when test="col.startTime == 0">null</when>
+					<otherwise>to_timestamp(#{col.startTime}, 'YYYY-MM-DD HH24:MI:SS.MS')</otherwise>
+				</choose>
+				, LPAD(#{col.warnType}, 3, '0')
+				, LPAD(#{col.warnStress}, 3, '0')
+				, to_timestamp(#{col.reqDate} || #{col.reqTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				,<choose>
+					<when test="col.endTime == 0">null</when>
+					<otherwise>to_timestamp(#{col.endTime}, 'YYYY-MM-DD HH24:MI:SS.MS')</otherwise>
+				</choose>
+			)
+		</foreach>
+		select * from dual
+	</insert>
+</mapper>

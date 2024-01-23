@@ -1,0 +1,1359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org/DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="MariaDB">
+
+	<!-- select -->
+	<select id="maria_db_conn_check" resultType="Integer">
+        select 1 as TT from DUAL
+	</select>
+
+
+	<select id="db_maria_tag_dic" parameterType="mone.db.dto.MariaReqDTO" resultType="mone.db.dto.MariaResDTO$hm_tag_dic">
+		SELECT
+			TAG_ID					,NODE_ID			,TAG_NAME				,GROUP_NAME			,TAG_TYPE
+			,TAG_DESCRIPTION		,INDIRECT_TAG_YN	,RUN_TAG_YN				,DATA_TYPE			,DATA_LENGTH
+			,DIGITAL_INIT_VAL		,DIGITAL_ON_STRING	,DIGITAL_OFF_STRING		,ALARM_TAG_YN		,ANALOG_INIT_VAL
+			,ANALOG_MIN_VAL			,ANALOG_MAX_VAL		,ANALOG_DECIMAL_POINT	,ANALOG_UNIT		,STRING_INIT_VAL
+			,LAST_STATUS_STORE_YN	,HARDWARE_TAG_YN	,`GROUP`				,NAME				,NODE
+			,DESCRIPTION			,MIN_TREND_GROUP
+	 	FROM HM_TAG_DIC
+	 	<!-- WHERE replace(lower(tag_id), '영동군.영동하수.', '') like #{tagId} -->
+
+	</select>
+
+	<!-- 날짜 시간 java 단에서 부여  -->
+
+	<!-- 1. select_prcs_anly_abnr_det -->
+	<select id="select_prcs_anly_abnr_det"  resultType="mone.db.dto.MariaResDTO$prcs_anly_abnr_det" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+			 	 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.PFI1001.AI_FL' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as PFI1001_AI_FL
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME  = #{recordTime}
+				AND TAG_ID IN ( '영동군.영동하수.PFI1001.AI_FL')
+		</foreach>
+	</select>
+
+
+	<sql id="userColumns">
+		case
+			when #{col} = 'T00' then T00 when #{col} = 'T01' then T01 when #{col} = 'T02' then T02 when #{col} = 'T03' then T03 when #{col} = 'T04' then T04
+			when #{col} = 'T05' then T05 when #{col} = 'T06' then T06 when #{col} = 'T07' then T07 when #{col} = 'T08' then T08 when #{col} = 'T09' then T09
+			when #{col} = 'T10' then T10 when #{col} = 'T11' then T11 when #{col} = 'T12' then T12 when #{col} = 'T13' then T13 when #{col} = 'T14' then T14
+			when #{col} = 'T15' then T15 when #{col} = 'T16' then T16 when #{col} = 'T17' then T17 when #{col} = 'T18' then T18 when #{col} = 'T19' then T19
+			when #{col} = 'T20' then T20 when #{col} = 'T21' then T21 when #{col} = 'T22' then T22 when #{col} = 'T23' then T23 when #{col} = 'T24' then T24
+			when #{col} = 'T25' then T25 when #{col} = 'T26' then T26 when #{col} = 'T27' then T27 when #{col} = 'T28' then T28 when #{col} = 'T29' then T29
+			when #{col} = 'T30' then T30 when #{col} = 'T31' then T31 when #{col} = 'T32' then T32 when #{col} = 'T33' then T33 when #{col} = 'T34' then T34
+			when #{col} = 'T35' then T35 when #{col} = 'T36' then T36 when #{col} = 'T37' then T37 when #{col} = 'T38' then T38 when #{col} = 'T39' then T39
+			when #{col} = 'T40' then T40 when #{col} = 'T41' then T41 when #{col} = 'T42' then T42 when #{col} = 'T43' then T43 when #{col} = 'T44' then T44
+			when #{col} = 'T45' then T45 when #{col} = 'T46' then T46 when #{col} = 'T47' then T47 when #{col} = 'T48' then T48 when #{col} = 'T49' then T49
+			when #{col} = 'T50' then T50 when #{col} = 'T51' then T51 when #{col} = 'T52' then T52 when #{col} = 'T53' then T53 when #{col} = 'T54' then T54
+			when #{col} = 'T55' then T55 when #{col} = 'T56' then T56 when #{col} = 'T57' then T57 when #{col} = 'T58' then T58 when #{col} = 'T59' then T59
+			when #{col} = 'MIN_VAL' then MIN_VAL
+			when #{col} = 'MIN_VAL' then MIN_VAL
+			when #{col} = 'MAX_VAL' then MAX_VAL
+			when #{col} = 'AVG_VAL' then AVG_VAL
+			when #{col} = 'SUM_VAL' then SUM_VAL
+		end
+	</sql>
+
+	<!-- 2. select_prcs_anly_flow_adj -->
+	<select id="select_prcs_anly_flow_adj"  resultType="mone.db.dto.MariaResDTO$prcs_anly_flow_adj" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+			 	 (select <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LTE101A.AI_LEV' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LTE101A_AI_LEV
+				,(select <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LTE101B.AI_LEV' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LTE101B_AI_LEV
+				,(select <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI201.AI_FL' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI201_AI_F
+				,(select <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FQ201.AI_FLSM' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FQ201_AI_FLSM
+				,(select <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT1001.AI_LEV'  	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT1001_AI_LEV
+
+				,(select <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT101_AI_LEV
+
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN ( '영동군.영동하수.LTE101A.AI_LEV'	,'영동군.영동하수.LTE101B.AI_LEV'	,'영동군.영동하수.FI201.AI_FL'		,'영동군.영동하수.FQ201.AI_FLSM'		,'영동군.영동하수.LT1001.AI_LEV',  '영동군.영동하수.LT101.AI_LEV')
+		</foreach>
+	</select>
+
+
+	<select id="select_prcs_anly_pac_inpt"  resultType="mone.db.dto.MariaResDTO$prcs_anly_pac_inpt" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+			 	 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.PFI1001.AI_FL' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as PFI1001_AI_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.PFI1001.AI_PO4P' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as PFI1001_AI_PO4P
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.PFI1001.AI_PH' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as PFI1001_AI_PH
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.PFI1003.AI_FL' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as PFI1003_AI_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI1002.AI_FL' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI1002_AI_FL
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.PO4P403A.AI_PO4P' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as PO4P403A_AI_PO4P
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.PO4P403B.AI_PO4P' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as PO4P403B_AI_PO4P
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT101_AI_LEV
+
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN ('영동군.영동하수.PFI1001.AI_FL'	,'영동군.영동하수.PFI1001.AI_PO4P'	,'영동군.영동하수.PFI1001.AI_PH'		,'영동군.영동하수.PFI1003.AI_FL',
+				'영동군.영동하수.FI1002.AI_FL', '영동군.영동하수.지능화.계측기.PO4P403A.AI_PO4P', '영동군.영동하수.지능화.계측기.PO4P403B.AI_PO4P', '영동군.영동하수.LT101.AI_LEV'  )
+		</foreach>
+	</select>
+
+	<select id="select_prcs_anly_stng_tank" resultType="mone.db.dto.MariaResDTO$prcs_anly_stng_tank" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+			 	 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT501.AI_LEV' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT501_AI_LEV
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FTE203A.AI_FL' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FTE203A_AI_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FTE203A.AI_FLSM' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FTE203A_AI_FLSM
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.DT501.AI_PH' 			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as DT501_AI_PH
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI805A.AI_FL' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI805A_AI_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FQ1003.AI_FLSM' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FQ1003_AI_FLSM
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI1003.AI_FL' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI1003_AI_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FQ1003.AI_FLSM03' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FQ1003_AI_FLSM03
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.PEI1003.AI_FL' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as PEI1003_AI_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI501.AL_FL' 			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI501_AL_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI502.AL_FL' 			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI502_AL_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI501.AI_FL' 			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI501_AI_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI502.AI_FL' 			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI502_AI_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI1002.AI_FL' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI1002_AI_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI1004.AI_FL' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI1004_AI_FL
+			 	,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.SLT1001.AI_PH' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as SLT1001_AI_PH
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT101_AI_LEV
+
+
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN (
+								 '영동군.영동하수.LT501.AI_LEV'		,'영동군.영동하수.FTE203A.AI_FL' 	,'영동군.영동하수.FTE203A.AI_FLSM'	,'영동군.영동하수.DT501.AI_PH'		,'영동군.영동하수.FI805A.AI_FL'
+								,'영동군.영동하수.FQ1003.AI_FLSM'	,'영동군.영동하수.FI1003.AI_FL'		,'영동군.영동하수.FQ1003.AI_FLSM03'	,'영동군.영동하수.PEI1003.AI_FL'		,'영동군.영동하수.FI501.AL_FL'
+								,'영동군.영동하수.FI502.AL_FL'		,'영동군.영동하수.FI501.AI_FL'		,'영동군.영동하수.FI502.AI_FL'		,'영동군.영동하수.FI1002.AI_FL'		,'영동군.영동하수.FI1004.AI_FL'
+								,'영동군.영동하수.SLT1001.AI_PH'		,'영동군.영동하수.LT101.AI_LEV'
+							)
+		</foreach>
+	</select>
+
+	<select id="select_prcs_anly_blow_vol"  resultType="mone.db.dto.MariaResDTO$prcs_anly_blow_vol" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+				 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI1001.AI_FL'     	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI1001_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI402.AI_FL'      	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI402_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI401A.AI_FL'     	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI401A_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI401B.AI_FL'     	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI401B_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI401C.AI_FL'     	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI401C_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI401D.AI_FL'     	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as FI401D_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.DO401A.AI_DO'     	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as DO401A_AI_DO
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.DO401B.AI_DO'     	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as DO401B_AI_DO
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.DO401C.AI_DO'     	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as DO401C_AI_DO
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.DO401D.AI_DO'     	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as DO401D_AI_DO
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.ORP402A.AI_ORP'   	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as ORP402A_AI_ORP
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.ORP402B.AI_ORP'   	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as ORP402B_AI_ORP
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.ORP402C.AI_ORP'   	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as ORP402C_AI_ORP
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.MLSS403A.AI_MLSS' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as MLSS403A_AI_MLSS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.MLSS403B.AI_MLSS' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as MLSS403B_AI_MLSS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.DO1001.AI_DO'     	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as DO1001_AI_DO
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.ORP1002.AI_ORP'   	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as ORP1002_AI_ORP
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.MLSS1003.AI_MLSS' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as MLSS1003_AI_MLSS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.SLT1001.AI_PH'    	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as SLT1001_AI_PH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.DT404.AI_PH'      	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as DT404_AI_PH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.PLT101.AI_LEV'    	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as PLT101_AI_LEV
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M405A.AO_HZS02'    	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AO_HZS02
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M405B.AO_HZS02'    	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AO_HZS02
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT101_AI_LEV
+
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN (
+								 '영동군.영동하수.FI1001.AI_FL'		,'영동군.영동하수.FI402.AI_FL'		,'영동군.영동하수.FI401A.AI_FL'		,'영동군.영동하수.FI401B.AI_FL'		,'영동군.영동하수.FI401C.AI_FL'
+								,'영동군.영동하수.FI401D.AI_FL'		,'영동군.영동하수.DO401A.AI_DO'		,'영동군.영동하수.DO401B.AI_DO'		,'영동군.영동하수.DO401C.AI_DO'		,'영동군.영동하수.DO401D.AI_DO'
+								,'영동군.영동하수.ORP402A.AI_ORP'	,'영동군.영동하수.ORP402B.AI_ORP'	,'영동군.영동하수.ORP402C.AI_ORP'	,'영동군.영동하수.MLSS403A.AI_MLSS'	,'영동군.영동하수.MLSS403B.AI_MLSS'
+								,'영동군.영동하수.ORP402B.AI_ORP'	,'영동군.영동하수.MLSS403B.AI_MLSS'	,'영동군.영동하수.DO1001.AI_DO'		,'영동군.영동하수.ORP1002.AI_ORP'	,'영동군.영동하수.MLSS1003.AI_MLSS'
+								,'영동군.영동하수.SLT1001.AI_PH'		,'영동군.영동하수.DT404.AI_PH'		,'영동군.영동하수.PLT101.AI_LEV'		,'영동군.영동하수.M405A.AO_HZS02'	,'영동군.영동하수.M405B.AO_HZS02'
+								,'영동군.영동하수.LT101.AI_LEV'
+							)
+		</foreach>
+	</select>
+
+	<select id="select_prcs_anly_infl"      resultType="mone.db.dto.MariaResDTO$prcs_anly_infl" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+				 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI102.AI_FL'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as  FI102_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI804.AI_FL'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	FI804_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.P_FI102.AI_FL'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	P_FI102_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.P_FI101.AI_FL'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	P_FI101_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI201.AI_FL'  	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	FI201_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT201.AI_LEV'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	LT201_AI_LEV
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FTE101.AI_FL'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	FTE101_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI101.AI_FL'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	FI101_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI301.AI_FL'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	FI301_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FTN101.AI_FL'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	FTN101_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FTN102.AI_FL'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	FTN102_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI601.AI_FL'  	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	FI601_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI701.AI_FL'  	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	FI701_AI_FL
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	LT101_AI_LEV
+
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN (
+								 '영동군.영동하수.FI102.AI_FL'		,'영동군.영동하수.FI804.AI_FL'		,'영동군.영동하수.P_FI102.AI_FL'		,'영동군.영동하수.P_FI101.AI_FL'		,'영동군.영동하수.FI201.AI_FL'
+								,'영동군.영동하수.LT201.AI_LEV'		,'영동군.영동하수.FTE101.AI_FL'		,'영동군.영동하수.FI101.AI_FL'		,'영동군.영동하수.FI301.AI_FL'		,'영동군.영동하수.LT101.AI_LEV'
+								,'영동군.영동하수.FTN101.AI_FL'		,'영동군.영동하수.FTN102.AI_FL'		,'영동군.영동하수.FI601.AI_FL'		,'영동군.영동하수.FI701.AI_FL'
+							)
+		</foreach>
+
+
+
+	</select>
+
+
+
+	<select id="select_prcs_anly_infl_second"      resultType="mone.db.dto.MariaResDTO$prcs_anly_infl" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+				 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI102.AI_FL'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as  FI102_AI_FL
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT201.AI_LEV'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	LT201_AI_LEV
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.FI301.AI_FL'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	FI301_AI_FL
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT101_AI_LEV
+
+
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN (
+								'영동군.영동하수.FI102.A_FL'
+								,'영동군.영동하수.LT201.AI_LEV'
+								,'영동군.영동하수.FI301.AI_FL'
+								,'영동군.영동하수.LT101.AI_LEV'
+							)
+		</foreach>
+	</select>
+
+
+	<select id="select_prcs_anly_infl_pump" resultType="mone.db.dto.MariaResDTO$prcs_anly_infl_pump" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+				 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_W'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117A_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117A_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_W'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117B_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117B_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_W'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117C_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117C_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M118_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M118_AI_WH
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' 			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT101_AI_LEV
+
+
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN (
+								 '영동군.영동하수.지능화.전력량계.M117A.AI_W'		,'영동군.영동하수.지능화.전력량계.M117A.AI_WH'		,'영동군.영동하수.지능화.전력량계.M117B.AI_W'		,'영동군.영동하수.지능화.전력량계.M117B.AI_WH'		,'영동군.영동하수.지능화.전력량계.M117C.AI_W'
+								,'영동군.영동하수.지능화.전력량계.M117C.AI_WH'	,'영동군.영동하수.지능화.전력량계.M118.AI_W'			,'영동군.영동하수.지능화.전력량계.M118.AI_WH'		,'영동군.영동하수.LT101.AI_LEV'
+							)
+		</foreach>
+	</select>
+
+	<select id="select_prcs_anly_denipho" resultType="mone.db.dto.MariaResDTO$prcs_anly_denipho" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+				 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.NO401.AI_NO3'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as NO3_DNSTY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.NH401.AI_NH4'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as NH4_DNSTY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.TEMP401.AI_TEMP'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as NO3_TMP
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.TEMP401.AI_TEMP'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as NH4_TMP
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' 				and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT101_AI_LEV
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN (	'영동군.영동하수.지능화.계측기.NO401.AI_NO3'	,'영동군.영동하수.지능화.계측기.TEMP401.AI_TEMP'	,'영동군.영동하수.지능화.계측기.NH401.AI_NH4', '영동군.영동하수.LT101.AI_LEV' )
+		</foreach>
+	</select>
+
+	<select id="select_prcs_anly_stng_tag_clct" resultType="mone.db.dto.MariaResDTO$prcs_anly_stng_tag_clct" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+				  (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   LT101_AI_LEV
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH0S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH0S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH1S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH1S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH2S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH2S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH3S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH3S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH4S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH4S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH5S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH5S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH6S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH6S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH7S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH7S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH8S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH8S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH9S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH9S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH10S'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH10S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH11S'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH11S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH12S'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH12S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH13S'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH13S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH14S'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH14S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH15S'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH15S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH16S'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH16S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AO_LEVH17S'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 LT101_AO_LEVH17S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH1S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH1S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH2S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH2S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH3S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH3S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH4S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH4S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH5S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH5S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH6S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH6S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH7S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH7S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH8S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH8S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH9S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH9S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH10S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH10S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH11S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH11S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH12S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH12S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH13S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH13S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH14S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH14S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH15S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH15S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH16S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH16S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_FQH17S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_FQH17S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207A.AI_ZT'			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207A_AI_ZT
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207A.AO_SV1S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207A_AO_SV1S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207A.AO_SV2S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207A_AO_SV2S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207A.AO_SV3S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207A_AO_SV3S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207A.AO_SV4S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207A_AO_SV4S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207A.AO_SV5S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207A_AO_SV5S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207A.AO_SV6S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207A_AO_SV6S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207A.AO_SV7S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207A_AO_SV7S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207A.AO_SV8S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207A_AO_SV8S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207B.AI_ZT'			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207B_AI_ZT
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207B.AO_SV1S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207B_AO_SV1S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207B.AO_SV2S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207B_AO_SV2S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207B.AO_SV3S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207B_AO_SV3S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207B.AO_SV4S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207B_AO_SV4S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207B.AO_SV5S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207B_AO_SV5S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207B.AO_SV6S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207B_AO_SV6S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207B.AO_SV7S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207B_AO_SV7S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M207B.AO_SV8S'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M207B_AO_SV8S
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_RUS01'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_RUS01
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_RUS02'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_RUS02
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_RUS03'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_RUS03
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M117.AO_RUS04'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 M117_AO_RUS04
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M405A.AO_HZS01'  	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 m405a_ao_hzs01
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M405A.AO_HZS02'  	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 m405a_ao_hzs02
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M405B.AO_HZS01'  	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 m405b_ao_hzs01
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M405B.AO_HZS02'  	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 m405b_ao_hzs02
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.반응조.AO_PCSC05'  	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 ao_pcsc05
+
+				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M405A.DI_RU'  		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 m405a_di_ru
+ 				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M405B.DI_RU'  		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 m405b_di_ru
+ 				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.M405C.DI_RU'  		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as 	 m405c_di_ru
+ 				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.반응조.AO_PCSC03' 		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as	 ao_pcsc03
+ 				 ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.반응조.AO_PCS03'  		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as	 ao_pcs03
+
+
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN (
+								 '영동군.영동하수.LT101.AI_LEV'
+								,'영동군.영동하수.LT101.AO_LEVH0S'
+								,'영동군.영동하수.LT101.AO_LEVH1S'
+								,'영동군.영동하수.LT101.AO_LEVH2S'
+								,'영동군.영동하수.LT101.AO_LEVH3S'
+								,'영동군.영동하수.LT101.AO_LEVH4S'
+								,'영동군.영동하수.LT101.AO_LEVH5S'
+								,'영동군.영동하수.LT101.AO_LEVH6S'
+								,'영동군.영동하수.LT101.AO_LEVH7S'
+								,'영동군.영동하수.LT101.AO_LEVH8S'
+								,'영동군.영동하수.LT101.AO_LEVH9S'
+								,'영동군.영동하수.LT101.AO_LEVH10'
+								,'영동군.영동하수.LT101.AO_LEVH11'
+								,'영동군.영동하수.LT101.AO_LEVH12'
+								,'영동군.영동하수.LT101.AO_LEVH13'
+								,'영동군.영동하수.LT101.AO_LEVH14'
+								,'영동군.영동하수.LT101.AO_LEVH15'
+								,'영동군.영동하수.LT101.AO_LEVH16'
+								,'영동군.영동하수.LT101.AO_LEVH17'
+								,'영동군.영동하수.M117.AO_FQH1S'
+								,'영동군.영동하수.M117.AO_FQH2S'
+								,'영동군.영동하수.M117.AO_FQH3S'
+								,'영동군.영동하수.M117.AO_FQH4S'
+								,'영동군.영동하수.M117.AO_FQH5S'
+								,'영동군.영동하수.M117.AO_FQH6S'
+								,'영동군.영동하수.M117.AO_FQH7S'
+								,'영동군.영동하수.M117.AO_FQH8S'
+								,'영동군.영동하수.M117.AO_FQH9S'
+								,'영동군.영동하수.M117.AO_FQH10S'
+								,'영동군.영동하수.M117.AO_FQH11S'
+								,'영동군.영동하수.M117.AO_FQH12S'
+								,'영동군.영동하수.M117.AO_FQH13S'
+								,'영동군.영동하수.M117.AO_FQH14S'
+								,'영동군.영동하수.M117.AO_FQH15S'
+								,'영동군.영동하수.M117.AO_FQH16S'
+								,'영동군.영동하수.M117.AO_FQH17S'
+								,'영동군.영동하수.M207A.AI_ZT'
+								,'영동군.영동하수.M207A.AO_SV1S'
+								,'영동군.영동하수.M207A.AO_SV2S'
+								,'영동군.영동하수.M207A.AO_SV3S'
+								,'영동군.영동하수.M207A.AO_SV4S'
+								,'영동군.영동하수.M207A.AO_SV5S'
+								,'영동군.영동하수.M207A.AO_SV6S'
+								,'영동군.영동하수.M207A.AO_SV7S'
+								,'영동군.영동하수.M207A.AO_SV8S'
+								,'영동군.영동하수.M207B.AI_ZT'
+								,'영동군.영동하수.M207B.AO_SV1S'
+								,'영동군.영동하수.M207B.AO_SV2S'
+								,'영동군.영동하수.M207B.AO_SV3S'
+								,'영동군.영동하수.M207B.AO_SV4S'
+								,'영동군.영동하수.M207B.AO_SV5S'
+								,'영동군.영동하수.M207B.AO_SV6S'
+								,'영동군.영동하수.M207B.AO_SV7S'
+								,'영동군.영동하수.M117.AO_RUS01'
+								,'영동군.영동하수.M117.AO_RUS02'
+								,'영동군.영동하수.M117.AO_RUS03'
+								,'영동군.영동하수.M117.AO_RUS04'
+								,'영동군.영동하수.M405A.AO_HZS01'
+								,'영동군.영동하수.M405A.AO_HZS02'
+								,'영동군.영동하수.M405B.AO_HZS01'
+								,'영동군.영동하수.M405B.AO_HZS02'
+								,'영동군.영동하수.반응조.AO_PCSC05'
+
+								,'영동군.영동하수.M405A.DI_RU'
+								,'영동군.영동하수.M405B.DI_RU'
+								,'영동군.영동하수.M405C.DI_RU'
+								,'영동군.영동하수.반응조.AO_PCSC03'
+								,'영동군.영동하수.반응조.AO_PCS03'
+
+				 )
+		</foreach>
+	</select>
+
+
+
+
+
+	<select id="select_prcs_anly_new_fclt"      resultType="mone.db.dto.MariaResDTO$prcs_anly_new_fclt" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+				 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.TOC301.AI_TOC'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as TOC301_AI_TOC
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.DO1002.AI_DO'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as DO1002_AI_do
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.NH1002.AI_NH4'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as NH1002_AI_NH4
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.NO1002.AI_NO3'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as NO1002_AI_NO3
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.ORP402A.AI_ORP'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as ORP402A_AI_ORp
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.ORP402B.AI_ORP'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as ORP402B_AI_ORp
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.ORP402C.AI_ORP'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as ORP402C_AI_ORp
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.SS201.AI_SS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as SS201_AI_SS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.SS501.AI_SS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as SS501_AI_SS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.SS1002.AI_SS' 	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as SS1002_AI_SS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.SLT502A.AI_SLT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as SLT502A_AI_SLt
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.SLT502B.AI_SLT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as SLT502B_AI_SLt
+                ,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.계측기.SLT502C.AI_SLT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as SLT502C_AI_SLt
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' 			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT101_AI_LEV
+
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN (
+								 '영동군.영동하수.지능화.계측기.TOC301.AI_TOC'
+								,'영동군.영동하수.지능화.계측기.DO1002.AI_DO'
+								,'영동군.영동하수.지능화.계측기.NH1002.AI_NH4'
+								,'영동군.영동하수.지능화.계측기.NO1002.AI_NO3'
+								,'영동군.영동하수.지능화.계측기.ORP402A.AI_ORP'
+								,'영동군.영동하수.지능화.계측기.ORP402B.AI_ORP'
+								,'영동군.영동하수.지능화.계측기.ORP402C.AI_ORP'
+								,'영동군.영동하수.지능화.계측기.SS201.AI_SS'
+								,'영동군.영동하수.지능화.계측기.SS501.AI_SS'
+								,'영동군.영동하수.지능화.계측기.SS1002.AI_SS'
+								,'영동군.영동하수.지능화.계측기.SLT502A.AI_SLT'
+								,'영동군.영동하수.지능화.계측기.SLT502B.AI_SLT'
+								,'영동군.영동하수.지능화.계측기.SLT502C.AI_SLT'
+								,'영동군.영동하수.LT101.AI_LEV'
+							)
+		</foreach>
+	</select>
+
+
+	<select id="select_prcs_anly_pwr"      resultType="mone.db.dto.MariaResDTO$prcs_anly_pwr" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+				 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117A_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117A_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117A_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117B_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117B_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117B_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117C_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117C_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117C_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M118_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_WH'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M118_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M118_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405A.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405A.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405A.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405B.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405B.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405B.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002A.AI_W'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002A.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002A.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002B.AI_W'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002B.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002B.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820A.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820A.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820A.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820B.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820B.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820B.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805A.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805A.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805A.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805B.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805B.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805B.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505A.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505A.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_WH
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505A.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_PER
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505C.AI_W'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505C_AI_W
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505C.AI_WH'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505C_AI_WHTOC301_AI_TOC
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505C.AI_PER'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505C_AI_PERTOC301_AI_TOC
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117A_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117A_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117A_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117B_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117B_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117B_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117C_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117C_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M117C_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_AR'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M118_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_AS'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M118_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_AT'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M118_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405A.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405A.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405A.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405B.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405B.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405B.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002A.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002A.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002A.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002B.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002B.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002B.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820A.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820A.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820A.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820B.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820B.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820B.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805A.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805A.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805A.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805B.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805B.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805B.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505A.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505A.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505A.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_AT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505C.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505C_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505C.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505C_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505C.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505C_AI_AT
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M117A_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M117A_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117A.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M117A_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M117B_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M117B_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117B.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M117B_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M117C_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M117C_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M117C.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M117C_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_VR'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M118_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_VS'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M118_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M118.AI_VT'		and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M118_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405A.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M405A_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405A.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M405A_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405A.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M405A_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405B.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M405B_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405B.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M405B_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M405B.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M405B_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002A.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M1002A_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002A.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M1002A_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002A.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M1002A_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002B.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M1002B_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002B.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M1002B_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M1002B.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M1002B_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820A.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M820A_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820A.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M820A_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820A.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M820A_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820B.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M820B_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820B.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M820B_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M820B.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M820B_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805A.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M805A_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805A.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M805A_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805A.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M805A_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805B.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M805B_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805B.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M805B_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M805B.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M805B_AI_VT
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505A.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M505A_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505A.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M505A_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505A.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M505A_AI_VT
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505B.AI_AR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M505B_AI_AR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505B.AI_AS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M505B_AI_AS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505B.AI_AT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M505B_AI_AT
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505C.AI_VR'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M505C_AI_VR
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505C.AI_VS'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M505C_AI_VS
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.전력량계.M505C.AI_VT'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as   M505C_AI_VT
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' 			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT101_AI_LEV
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN (
+								 	'영동군.영동하수.LT101.AI_LEV'
+								 	,'영동군.영동하수.지능화.전력량계.M117A.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M117A.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M117A.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M117B.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M117B.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M117B.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M117C.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M117C.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M117C.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M118.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M118.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M118.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M405A.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M405A.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M405A.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M405B.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M405B.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M405B.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M1002A.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M1002A.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M1002A.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M1002B.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M1002B.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M1002B.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M820A.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M820A.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M820A.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M820B.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M820B.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M820B.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M805A.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M805A.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M805A.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M805B.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M805B.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M805B.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M505A.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M505A.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M505A.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M505C.AI_W'
+									,'영동군.영동하수.지능화.전력량계.M505C.AI_WH'
+									,'영동군.영동하수.지능화.전력량계.M505C.AI_PER'
+									,'영동군.영동하수.지능화.전력량계.M117A.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M117A.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M117A.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M117B.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M117B.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M117B.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M117C.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M117C.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M117C.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M118.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M118.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M118.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M405A.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M405A.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M405A.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M405B.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M405B.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M405B.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M1002A.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M1002A.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M1002A.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M1002B.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M1002B.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M1002B.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M820A.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M820A.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M820A.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M820B.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M820B.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M820B.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M805A.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M805A.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M805A.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M805B.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M805B.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M805B.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M505A.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M505A.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M505A.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M505C.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M505C.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M505C.AI_AT'
+									,'영동군.영동하수.지능화.전력량계.M117A.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M117A.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M117A.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M117B.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M117B.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M117B.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M117C.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M117C.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M117C.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M118.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M118.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M118.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M405A.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M405A.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M405A.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M405B.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M405B.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M405B.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M1002A.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M1002A.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M1002A.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M1002B.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M1002B.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M1002B.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M820A.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M820A.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M820A.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M820B.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M820B.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M820B.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M805A.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M805A.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M805A.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M805B.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M805B.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M805B.AI_VT'
+									,'영동군.영동하수.지능화.전력량계.M505A.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M505A.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M505A.AI_VT'
+
+									,'영동군.영동하수.지능화.전력량계.M505B.AI_AR'
+									,'영동군.영동하수.지능화.전력량계.M505B.AI_AS'
+									,'영동군.영동하수.지능화.전력량계.M505B.AI_AT'
+
+									,'영동군.영동하수.지능화.전력량계.M505C.AI_VR'
+									,'영동군.영동하수.지능화.전력량계.M505C.AI_VS'
+									,'영동군.영동하수.지능화.전력량계.M505C.AI_VT'
+
+
+							)
+		</foreach>
+	</select>
+
+
+	<select id="minute_trend_all_history" resultType="mone.db.dto.MariaResDTO$hm_minute_trend_history">
+
+			SELECT
+				 TAG_ID			,TAG_GROUP_NAME	,TAG_NAME		,RECORD_DATE	,RECORD_TIME
+				,T00			,T01			,T02			,T03			,T04
+				,T05			,T06			,T07			,T08			,T09
+				,T10			,T11			,T12			,T13			,T14
+				,T15			,T16			,T17			,T18			,T19
+				,T20			,T21			,T22			,T23			,T24
+				,T25			,T26			,T27			,T28			,T29
+				,T30			,T31			,T32			,T33			,T34
+				,T35			,T36			,T37			,T38			,T39
+				,T40			,T41			,T42			,T43			,T44
+				,T45			,T46			,T47			,T48			,T49
+				,T50			,T51			,T52			,T53			,T54
+				,T55			,T56			,T57			,T58			,T59
+				,T00_STATUS		,T01_STATUS		,T02_STATUS		,T03_STATUS		,T04_STATUS
+				,T05_STATUS		,T06_STATUS		,T07_STATUS		,T08_STATUS		,T09_STATUS
+				,T10_STATUS		,T11_STATUS		,T12_STATUS		,T13_STATUS		,T14_STATUS
+				,T15_STATUS		,T16_STATUS		,T17_STATUS		,T18_STATUS		,T19_STATUS
+				,T20_STATUS		,T21_STATUS		,T22_STATUS		,T23_STATUS		,T24_STATUS
+				,T25_STATUS		,T26_STATUS		,T27_STATUS		,T28_STATUS		,T29_STATUS
+				,T30_STATUS		,T31_STATUS		,T32_STATUS		,T33_STATUS		,T34_STATUS
+				,T35_STATUS		,T36_STATUS		,T37_STATUS		,T38_STATUS		,T39_STATUS
+				,T40_STATUS		,T41_STATUS		,T42_STATUS		,T43_STATUS		,T44_STATUS
+				,T45_STATUS		,T46_STATUS		,T47_STATUS		,T48_STATUS		,T49_STATUS
+				,T50_STATUS		,T51_STATUS		,T52_STATUS		,T53_STATUS		,T54_STATUS
+				,T55_STATUS		,T56_STATUS		,T57_STATUS		,T58_STATUS		,T59_STATUS
+				,MIN_VAL		,MIN_VAL_TIME	,MAX_VAL		,MAX_VAL_TIME	,AVG_VAL
+				,SUM_VAL
+			FROM HM_MINUTE_TREND_HISTORY
+				WHERE
+					(TAG_ID like '영동군.영동하수.지능화%' OR
+						TAG_ID in (
+									 '영동군.영동하수.FI101.AI_FL'			,'영동군.영동하수.LT101.AI_LEV'				,'영동군.영동하수.FI102.AI_FL'			,'영동군.영동하수.LT201.AI_LEV'
+									,'영동군.영동하수.FTE101.AI_FL'			,'영동군.영동하수.FI301.AI_FL'				,'영동군.영동하수.FTN101.AI_FL'			,'영동군.영동하수.FTN102.AI_FL'
+									,'영동군.영동하수.FI402.AI_FL'			,'영동군.영동하수.ORP402A.AI_ORP'			,'영동군.영동하수.ORP402B.AI_ORP'		,'영동군.영동하수.ORP402C.AI_ORP'
+									,'영동군.영동하수.DO401A.AI_DO'			,'영동군.영동하수.DO401B.AI_DO'				,'영동군.영동하수.DO401B.AI_DO'			,'영동군.영동하수.DO401D.AI_DO'
+									,'영동군.영동하수.MLSS403A.AI_MLSS'		,'영동군.영동하수.MLSS403B.AI_MLSS'			,'영동군.영동하수.DT404.AI_PH'			,'영동군.영동하수.LT501.AI_LEV'
+									,'영동군.영동하수.FI501.AI_FL'			,'영동군.영동하수.FI502.AI_FL'				,'영동군.영동하수.DT501.AI_PH'			,'영동군.영동하수.FI201.AI_FL'
+									,'영동군.영동하수.LT1001.AI_LEV'			,'영동군.영동하수.ORP1002.AI_ORP'			,'영동군.영동하수.DO1001.AI_DO'			,'영동군.영동하수.SLT1001.AI_PH'
+									,'영동군.영동하수.MLSS1003.AI_MLSS'		,'영동군.영동하수.FI1001.AI_FL'				,'영동군.영동하수.FI1003.AI_FL'			,'영동군.영동하수.FI1004.AI_FL'
+									,'영동군.영동하수.FI1002.AI_FL'			,'영동군.영동하수.PFI1001.AI_FL'				,'영동군.영동하수.PLT101.AI_LEV'			,'영동군.영동하수.PFI1003.AI_FL'
+									,'영동군.영동하수.FI601.AI_FL'
+								)
+					)
+					AND RECORD_DATE =  DATE_FORMAT(NOW(),'%Y%m%d')
+					AND RECORD_TIME BETWEEN  DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 HOUR),'%H') AND DATE_FORMAT(NOW(),'%H')
+	</select>
+
+
+
+	<select id="select_prcs_anly_vbrt" resultType="mone.db.dto.MariaResDTO$prcs_anly_vbrt" parameterType="java.util.Map">
+		<foreach collection="resultList" item="col" index="index" separator=" UNION ">
+			SELECT RECORD_DATE, RECORD_TIME,
+				case
+					when  SUBSTRING(#{col}, 1, 1) = 'T' 	then SUBSTR(#{col}, 2, 2)
+					when  SUBSTRING(#{col}, 5) = 'STATUS' 	then SUBSTR(#{col}, 2, 2)
+					else  59
+				end as RECORD_MINUTE,
+				<choose>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MIN_VAL' " >	'min' as FLAG,	</when>
+					<when test=" col == 'MAX_VAL' " >	'max' as FLAG,	</when>
+					<when test=" col == 'AVG_VAL' " >	'avg' as FLAG,	</when>
+					<when test=" col == 'SUM_VAL' " >	'sum' as FLAG,	</when>
+					<otherwise>							'cur' as FLAG, 	</otherwise>
+				</choose>
+				 (select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002A.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002B.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007A.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007A_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007B.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007B_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201A.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201A_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201B.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201B_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207A.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207A_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207B.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207B_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405A.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405B.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505A.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505B.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505B_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805A.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805B.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820A.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_KX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820B.AI_KX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_KX
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002A.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002A.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002A.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002A.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002A.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002A.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002A_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002B.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002B.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002B.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002B.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002B.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1002B.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1002B_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007A.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007A_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007A.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007A_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007A.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007A_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007A.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007A_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007A.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007A_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007A.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007A_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007B.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007B_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007B.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007B_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007B.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007B_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007B.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007B_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007B.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007B_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1007B.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1007B_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201A.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201A_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201A.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201A_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201A.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201A_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201A.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201A_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201A.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201A_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201A.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201A_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201B.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201B_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201B.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201B_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201B.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201B_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201B.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201B_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201B.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201B_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1201B.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1201B_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207A.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207A_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207A.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207A_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207A.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207A_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207A.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207A_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207A.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207A_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207A.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207A_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207B.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207B_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207B.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207B_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207B.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207B_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207B.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207B_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207B.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207B_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M1207B.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M1207B_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405A.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405A.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405A.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405A.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405A.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405A.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405A_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405B.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405B.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405B.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405B.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405B.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M405B.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M405B_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505A.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505A.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505A.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505A.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505A.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505A.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505A_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505B.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505B_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505B.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505B_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505B.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505B_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505B.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505B_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505B.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505B_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M505B.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M505B_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805A.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805A.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805A.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805A.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805A.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805A.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805A_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805B.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805B.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805B.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805B.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805B.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M805B.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M805B_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820A.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820A.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820A.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820A.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820A.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820A.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820A_AI_RAZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820B.AI_PVX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_PVX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820B.AI_PVY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_PVY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820B.AI_PVZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_PVZ
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820B.AI_RAX'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_RAX
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820B.AI_RAY'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_RAY
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.지능화.진동센서.M820B.AI_RAZ'	and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as M820B_AI_RAZ
+
+				,(select  <include refid="userColumns"></include> from HM_MINUTE_TREND_HISTORY where TAG_ID = '영동군.영동하수.LT101.AI_LEV' 			and RECORD_DATE = #{recordDate} AND RECORD_TIME  = #{recordTime}  ) as LT101_AI_LEV
+
+			FROM HM_MINUTE_TREND_HISTORY
+			WHERE RECORD_DATE =  #{recordDate}
+				AND RECORD_TIME = #{recordTime}
+				AND TAG_ID IN (
+								'영동군.영동하수.LT101.AI_LEV'
+								,'영동군.영동하수.지능화.진동센서.M1002A.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M1002B.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M1007A.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M1007B.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M1201A.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M1201B.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M1207A.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M1207B.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M405A.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M405B.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M505A.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M505B.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M805A.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M805B.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M820A.AI_KX'
+								,'영동군.영동하수.지능화.진동센서.M820B.AI_KX'
+
+								,'영동군.영동하수.지능화.진동센서.M1002A.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M1002A.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M1002A.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M1002A.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M1002A.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M1002A.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M1002B.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M1002B.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M1002B.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M1002B.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M1002B.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M1002B.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M1007A.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M1007A.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M1007A.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M1007A.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M1007A.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M1007A.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M1007B.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M1007B.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M1007B.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M1007B.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M1007B.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M1007B.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M1201A.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M1201A.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M1201A.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M1201A.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M1201A.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M1201A.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M1201B.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M1201B.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M1201B.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M1201B.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M1201B.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M1201B.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M1207A.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M1207A.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M1207A.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M1207A.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M1207A.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M1207A.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M1207B.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M1207B.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M1207B.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M1207B.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M1207B.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M1207B.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M405A.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M405A.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M405A.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M405A.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M405A.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M405A.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M405B.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M405B.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M405B.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M405B.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M405B.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M405B.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M505A.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M505A.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M505A.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M505A.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M505A.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M505A.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M505B.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M505B.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M505B.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M505B.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M505B.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M505B.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M805A.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M805A.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M805A.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M805A.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M805A.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M805A.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M805B.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M805B.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M805B.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M805B.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M805B.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M805B.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M820A.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M820A.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M820A.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M820A.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M820A.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M820A.AI_RAZ'
+								,'영동군.영동하수.지능화.진동센서.M820B.AI_PVX'
+								,'영동군.영동하수.지능화.진동센서.M820B.AI_PVY'
+								,'영동군.영동하수.지능화.진동센서.M820B.AI_PVZ'
+								,'영동군.영동하수.지능화.진동센서.M820B.AI_RAX'
+								,'영동군.영동하수.지능화.진동센서.M820B.AI_RAY'
+								,'영동군.영동하수.지능화.진동센서.M820B.AI_RAZ'
+							)
+		</foreach>
+	</select>
+
+
+	<insert id="insert_optmz_cntr_data_mlss" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+		INSERT INTO opt.optmz_cntr_mlss (
+		      flag, recd_dt, mark, open_stng_val, close_stng_val
+		) VALUES (
+		      #{mlssFlag} ,TIMESTAMP(DATE_FORMAT(#{mlssRecdDt}, '%Y%m%d%H%i%s')) ,#{mlssMark}, #{mlssOpenStngVal}, #{mlssCloseStngVal}
+		)
+		ON DUPLICATE KEY UPDATE
+			open_stng_val	=	#{mlssOpenStngVal},
+			close_stng_val 	=	#{mlssCloseStngVal}
+	</insert>
+
+	<insert id="insert_optmz_cntr_data_pump" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+		INSERT INTO opt.optmz_cntr_pump (
+		      	flag, recd_dt, mark, m117a_ordr, m117b_ordr, m117c_ordr, m118_ordr, h5_hz, h4_hz, h3_hz, h2_hz, h1_hz
+
+		) VALUES (
+
+		      #{pumpFlag} ,TIMESTAMP(DATE_FORMAT(#{pumpRecdDt}, '%Y%m%d%H%i%s')), #{pumpMark}, #{m117aOrdr}, #{m117bOrdr}, #{m117cOrdr}, #{m118Ordr}, #{h5Hz}, #{h4Hz}, #{h3Hz}, #{h2Hz}, #{h1Hz}
+		)
+		ON DUPLICATE KEY UPDATE
+			 m117a_ordr = #{m117aOrdr},
+			 m117b_ordr = #{m117bOrdr},
+			 m117c_ordr = #{m117cOrdr},
+			 m118_ordr  = #{m118Ordr},
+			 h5_hz      = #{h5Hz},
+			 h4_hz      = #{h4Hz},
+			 h3_hz      = #{h3Hz},
+			 h2_hz      = #{h2Hz},
+			 h1_hz      = #{h1Hz}
+
+	</insert>
+
+	<insert id="insert_optmz_cntr_data_psbr" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+
+		INSERT INTO opt.optmz_cntr_psbr (
+		      flag, recd_dt, mark, m1002a_optmz, m1002b_optmz, pm1009a_optmz, pm1009b_optmz
+		) VALUES (
+		      #{psbrFlag},TIMESTAMP(DATE_FORMAT(#{psbrRecdDt}, '%Y%m%d%H%i%s')), #{psbrMark}, #{m1002aOptmz}, #{m1002bOptmz}, #{pm1009aOptmz}, #{pm1009bOptmz}
+		)
+		ON DUPLICATE KEY UPDATE
+			m1002a_optmz	=  #{m1002aOptmz},
+			m1002b_optmz	=  #{m1002bOptmz},
+			pm1009a_optmz	=  #{pm1009aOptmz},
+			pm1009b_optmz	=  #{pm1009bOptmz}
+	</insert>
+
+	<insert id="insert_optmz_cntr_data_denipho" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+		INSERT INTO opt.optmz_cntr_denipho (
+		      flag, recd_dt, mark, fclt_knd, stng_val
+		) VALUES (
+		       #{deniphoFlag} ,TIMESTAMP(DATE_FORMAT(#{deniphoRecdDt}, '%Y%m%d%H%i%s')), #{deniphoMark}, #{deniphoFcltKnd}, #{deniphoStngVal}
+		)
+		ON DUPLICATE KEY UPDATE
+			fclt_knd = #{deniphoFcltKnd},
+			stng_val = #{deniphoStngVal}
+	</insert>
+
+	<insert id="insert_optmz_cntr_data_pac" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+		INSERT INTO opt.optmz_cntr_pac (
+		      flag, recd_dt, mark, fclt_knd, stng_val
+		) VALUES (
+		       #{pacFlag} ,TIMESTAMP(DATE_FORMAT(#{pacRecdDt}, '%Y%m%d%H%i%s')), #{pacMark}, #{pacFcltKnd}, #{pacStngVal}
+		)
+		ON DUPLICATE KEY UPDATE
+			fclt_knd = #{pacFcltKnd},
+			stng_val = #{pacStngVal}
+	</insert>
+
+	<update id="update_optmz_cntr_data" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+
+		update
+				<choose>
+					<when test="chkTablenm=='optmz_cntr_pump'">opt.optmz_cntr_pump</when>
+					<when test="chkTablenm=='optmz_cntr_psbr'">opt.optmz_cntr_psbr</when>
+					<when test="chkTablenm=='optmz_cntr_denipho'">opt.optmz_cntr_denipho</when>
+					<when test="chkTablenm=='optmz_cntr_pac'">opt.optmz_cntr_pac</when>
+					<when test="chkTablenm=='optmz_cntr_mlss'">opt.optmz_cntr_mlss</when>
+				</choose>
+		set mark='Y'
+			where 	flag = 'opt'
+				and mark <![CDATA[<>]]> 'Y'
+				and recd_dt = #{recdDt}
+	</update>
+
+
+
+	<select id="select_optmz_cntr_data_pump" resultType="mone.db.dto.MariaResDTO$optmz_cntr_data" parameterType="java.util.Map">
+
+		SELECT flag 				as 	pump_flag,
+				recd_dt 			as 	pump_recd_dt,
+				mark				as  pump_mark,
+				opt_stat				as  pump_status
+			FROM opt.optmz_cntr_pump
+		order by recd_dt desc limit 1
+	</select>
+
+	<select id="select_optmz_cntr_data_denipho" resultType="mone.db.dto.MariaResDTO$optmz_cntr_data" parameterType="java.util.Map">
+
+		SELECT 	flag 				as 	denipho_flag,
+				recd_dt 			as 	denipho_recd_dt,
+				mark				as  denipho_mark,
+				opt_stat				as  denipho_status
+		FROM opt.optmz_cntr_denipho
+		order by recd_dt desc limit 1
+	</select>
+
+	<select id="select_optmz_cntr_data_psbr" resultType="mone.db.dto.MariaResDTO$optmz_cntr_data" parameterType="java.util.Map">
+
+		SELECT 	flag 				as 	psbr_flag,
+				recd_dt 			as 	psbr_recd_dt,
+				mark				as  psbr_mark,
+				opt_stat				as  psbr_status
+		FROM opt.optmz_cntr_psbr
+		order by recd_dt desc limit 1
+	</select>
+
+	<select id="select_optmz_cntr_data_pac" resultType="mone.db.dto.MariaResDTO$optmz_cntr_data" parameterType="java.util.Map">
+
+		SELECT 	flag 				as 	pac_flag,
+				recd_dt 			as 	pac_recd_dt,
+				mark				as  pac_mark,
+				opt_stat				as  pac_status
+		FROM opt.optmz_cntr_pac
+		order by recd_dt desc limit 1
+	</select>
+
+	<select id="select_optmz_cntr_data_mlss" resultType="mone.db.dto.MariaResDTO$optmz_cntr_data" parameterType="java.util.Map">
+
+		SELECT 	flag 				as 	mlss_flag,
+				recd_dt 			as 	mlss_recd_dt,
+				mark				as  mlss_mark,
+				opt_stat				as  mlss_status
+		FROM opt.optmz_cntr_mlss
+		order by recd_dt desc limit 1
+	</select>
+
+
+
+</mapper>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+
+	<properties>
+		<property name="name">mindOne</property>
+		<property name="base_dir">./logs/</property>
+		<property name="pattern">[%d{yyyy-MM-dd HH:mm:ss}][%p][%c]%m%n</property>
+	</properties>
+ 	<!-- Appender, Layout 설정 -->
+	<Appenders>
+	  	<Console name="console" target="SYSTEM_OUT">
+	   		<PatternLayout pattern="${pattern}"/>
+	  	</Console>
+
+	  	<RollingFile name="file" fileName="${base_dir}/${name}.log" filePattern="${base_dir}/${name}%d{yyyyMMdd}-%i.log.zip">
+	  		<PatternLayout pattern="${pattern}"/>
+	  		<Policies>
+	  			<!-- 일별 로그 파일 생성-->
+	  			<TimeBasedTriggeringPolicy modulate="true" interval="1"/>
+	  			<SizeBasedTriggeringPolicy size="10MB"/>
+	  		</Policies>
+
+	  		<DefaultRolloverStrategy>
+	  			<Delete basePath="${base_dir}" maxDepth="0">
+	  				<!-- <IfFileName glob="${name}*.log.zip"/> -->
+					<IfLastModified age="7d"/>
+	  			</Delete>
+	  		</DefaultRolloverStrategy>
+	  	</RollingFile>
+	</Appenders>
+
+	 <!-- TRACE<DEBUG<INFO<WARN<ERROR<FATAL<OFF -->
+	<!-- Logger 설정 -->
+	<Loggers>
+
+		<Logger name="main" level="DEBUG" additivity="false">
+	   		<AppenderRef ref="console"/>
+	   		<AppenderRef ref="file"/>
+	  	</Logger>
+	  	<Logger name="mone.common.conf" level="DEBUG" additivity="false">
+	   		<AppenderRef ref="console"/>
+	   		<AppenderRef ref="file"/>
+	  	</Logger>
+	  	<Logger name="mone.common.util" level="DEBUG" additivity="false">
+	   		<AppenderRef ref="console"/>
+	   		<AppenderRef ref="file"/>
+	  	</Logger>
+	  	<Logger name="mone.db.conn" level="DEBUG" additivity="false">
+	   		<AppenderRef ref="console"/>
+	   		<AppenderRef ref="file"/>
+	  	</Logger>
+	  	<Logger name="mone.db.dao" level="DEBUG" additivity="false">
+	   		<AppenderRef ref="console"/>
+	   		<AppenderRef ref="file"/>
+	  	</Logger>
+
+	  	<Logger name="mone.schedule.job" level="DEBUG" additivity="false">
+	   		<AppenderRef ref="console"/>
+	   		<AppenderRef ref="file"/>
+	  	</Logger>
+	  	<Logger name="mone.schedule.scheduler" level="DEBUG" additivity="false">
+	   		<AppenderRef ref="console"/>
+	   		<AppenderRef ref="file"/>
+	  	</Logger>
+
+
+
+	  	<Root level="DEBUG">
+	  		<AppenderRef ref="console" level="DEBUG"/>
+	   		<AppenderRef ref="file" level="DEBUG"/>
+	  	</Root>
+	  	<!--  <Root level="DEBUG">
+			<appender-ref ref="Console" level="INFO"/>
+			<appender-ref ref="MyFile" level="ERROR"/>
+		</Root> -->
+	</Loggers>
+</Configuration>

@@ -1,0 +1,1875 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org/DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PostgresDB">
+
+	<!-- select -->
+	<select id="postgres_db_conn_check" resultType="Integer">
+        select CAST('1' AS INTEGER) as TT
+	</select>
+
+    <insert id="prcs_opt_run" statementType="CALLABLE" parameterType="java.util.HashMap">
+        {
+             call st_intelligent_schema.prc_operation_total()
+        }
+    </insert>
+
+
+	<select id="check_final_date" resultType="String" parameterType="java.util.Map">
+        select * from (
+			select * from (
+					select
+							case
+								when recd_dt > now()  then TO_CHAR(now(),'YYYYMMDDHH24MI')
+								else TO_CHAR(recd_dt,'YYYYMMDDHH24MI')
+							end	as recd_dt
+
+						from
+						<choose>
+							<when test="chkTablenm=='flux_eqlt_eqp_tag_clct'">st_intelligent_schema.flux_eqlt_eqp_tag_clct</when>
+							<when test="chkTablenm=='pac_inpt_vol_predict_data'">st_intelligent_schema.pac_inpt_vol_predict_data</when>
+							<when test="chkTablenm=='frst_sdmt_tank_tag_clct'">st_intelligent_schema.frst_sdmt_tank_tag_clct</when>
+							<when test="chkTablenm=='wot_vol_tag_clct'">st_intelligent_schema.wot_vol_tag_clct</when>
+							<when test="chkTablenm=='infl_vol_tag_clct'">st_intelligent_schema.infl_vol_tag_clct</when>
+							<when test="chkTablenm=='infl_vol_tag_clct'">st_intelligent_schema.infl_vol_tag_clct</when>
+							<when test="chkTablenm=='infl_pump_pwrer_tag_clct'">st_intelligent_schema.infl_pump_pwrer_tag_clct</when>
+							<when test="chkTablenm=='new_eqp_tag_clct'">st_intelligent_schema.new_eqp_tag_clct</when>
+							<when test="chkTablenm=='pwrer_tag_clct'">st_intelligent_schema.pwrer_tag_clct</when>
+							<when test="chkTablenm=='vibrat_tag_clct'">st_intelligent_schema.vibrat_tag_clct</when>
+							<when test="chkTablenm=='denipho_sers_msur_dnsty'">st_intelligent_schema.denipho_sers_msur_dnsty</when>
+							<when test="chkTablenm=='prcs_anly_stng_tag_clct'">st_intelligent_schema.prcs_anly_stng_tag_clct</when>
+						</choose>
+
+						where	1=1
+								<if test="scadaSelectFromDt != null">
+								and recd_dt  >= to_timestamp(#{scadaSelectFromDt},'YYYYMMDDHH24MI')				<!-- 설정일을 기준으로 가장최신 데이터 부터 데이터를 조회 할 수 있도록 함 -->
+								</if>
+								<if test="scadaSelectEndDt != null">
+								and to_timestamp(#{scadaSelectEndDt},'YYYYMMDDHH24MI')  >= recd_dt
+								</if>
+								and flag='cur'
+						order by recd_dt desc
+					limit 1
+				) A
+				union
+			select '202201010000' as recd_dt
+		) B order by recd_dt desc
+		limit 1
+	</select>
+
+
+	<insert id="insert_syst_mngm_agt_stt" parameterType="mone.db.dto.SystMngmAgtSttDTO">
+		insert into st_intelligent_schema.clctr_stus_mntrg (
+			recd_dt, procs_sttus_cd, clct_data_val, prcs_type
+		) values (
+			now(), #{procsSttusCd}, #{procsCnt}, #{procsType}
+		)
+	</insert>
+
+<!-- flag properties
+	currunt_value	=>	cur
+	status_value	=>	stt
+	minimum_value	=>	min
+	maximun_value	=>	max
+	avergage_value	=>	avg
+	summation_value	=>	sum
+ -->
+
+	<insert id="insert_prcs_anly_abnr_det"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_abnr_det">
+		with TEMP as
+		(
+			update st_intelligent_schema.prcs_anly_abnr_det set
+				v_data 		= #{vData}
+				v_thres1	= #{vThres1},
+				v_thres2 	= #{vThres2},
+				a_ptime 	= #{aPtime},
+				v_tag 		= #{v_tag}
+			where
+				recd_dt =  to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.prcs_anly_abnr_det
+		(
+			v_data, 			v_thres1, 			v_thres2, 				a_ptime, 			recd_dt,
+			flag, 				v_tag
+		)
+		select
+			#{vData}, 			#{vThres1}, 		#{vThres2}, 			#{aPtime}, 			 to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS'),
+			#{flag}, 			#{vTag}
+		where not exists(select * from TEMP)
+
+	</insert>
+
+	<insert id="insert_prcs_anly_flow_adj"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_flow_adj">
+
+		with TEMP as
+		(
+			update st_intelligent_schema.flux_eqlt_eqp_tag_clct set
+				 lte101a_ai_lev = #{lte101aAiLev}
+				,lte101b_ai_lev = #{lte101bAiLev}
+				,fi201_ai_fl 	= #{fi201AiFl}
+				,fq201_ai_flsm	= #{fq201AiFlsm}
+				,lt1001_ai_lev  = #{lt1001AiLev}
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.flux_eqlt_eqp_tag_clct
+		(
+			lte101a_ai_lev, 	lte101b_ai_lev, 	fi201_ai_fl, 			fq201_ai_flsm,		lt1001_ai_lev,
+			recd_dt, 			flag
+		)
+		select
+			#{lte101aAiLev},	#{lte101bAiLev}, 	#{fi201AiFl}, 			#{fq201AiFlsm}, 	#{lt1001AiLev},
+			to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS'),	#{flag}
+		where not exists(select * from TEMP)
+
+	</insert>
+
+	<insert id="insert_prcs_anly_pac_inpt"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_pac_inpt">
+
+		with TEMP as
+		(
+			update st_intelligent_schema.pac_inpt_vol_predict_data set
+				 pfi1001_ai_fl		 = #{pfi1001AiFl}
+				,pfi1001_ai_po4p     = #{pfi1001AiPo4p}
+				,pfi1001_ai_ph       = #{pfi1001AiPh}
+				,pfi1003_ai_fl       = #{pfi1003AiFl}
+				,fi1002_ai_fl        = #{fi1002AiFl}
+				,po4p403a_ai_po4p	 = #{po4p403aAiPo4p}
+				,po4p403b_ai_po4p    = #{po4p403bAiPo4p}
+
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.pac_inpt_vol_predict_data
+		(
+			 pfi1001_ai_fl
+			,pfi1001_ai_po4p
+			,pfi1001_ai_ph
+			,pfi1003_ai_fl
+			,fi1002_ai_fl
+			,recd_dt
+			,flag
+			,po4p403a_ai_po4p
+			,po4p403b_ai_po4p
+		)
+		select
+			 #{pfi1001AiFl}
+			,#{pfi1001AiPo4p}
+			,#{pfi1001AiPh}
+			,#{pfi1003AiFl}
+			,#{fi1002AiFl}
+			,to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+			,#{flag}
+			,#{po4p403aAiPo4p}
+			,#{po4p403bAiPo4p}
+		where not exists(select * from TEMP)
+
+	</insert>
+
+	<insert id="insert_prcs_anly_stng_tank"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_stng_tank">
+
+		with TEMP as
+		(
+			update st_intelligent_schema.frst_sdmt_tank_tag_clct set
+				 lt501_ai_lev		= #{lt501AiLev}
+				,fte203a_ai_fl	    = #{fte203aAiFl}
+				,fte203a_ai_flsm	= #{fte203aAiFlsm}
+				,dt501_ai_ph	    = #{dt501AiPh}
+				,fi805a_ai_fl       = #{fi805aAiFl}
+				,fq1003_ai_flsm     = #{fq1003AiFlsm}
+				,fi1003_ai_fl	    = #{fi1003AiFl}
+				,fq1003_ai_flsm03	= #{fq1003AiFlsm03}
+				,pei1003_ai_fl      = #{pei1003AiFl}
+				,fi501_al_fl		= #{fi501AlFl}
+				,fi502_al_fl		= #{fi502AlFl}
+				,fi501_ai_fl		= #{fi501AiFl}
+				,fi502_ai_fl        = #{fi502AiFl}
+				,fi1002_ai_fl       = #{fi1002AiFl}
+				,fi1004_ai_fl       = #{fi1004AiFl}
+				,slt1001_ai_ph		= #{slt1001AiPh}
+
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.frst_sdmt_tank_tag_clct
+		(
+			lt501_ai_lev, 		fte203a_ai_fl, 		fte203a_ai_flsm, 		dt501_ai_ph, 		fi805a_ai_fl,
+			fq1003_ai_flsm, 	fi1003_ai_fl, 		fq1003_ai_flsm03, 		pei1003_ai_fl,		recd_dt,
+			flag,				fi501_al_fl,		fi502_al_fl,			fi501_ai_fl,		fi502_ai_fl,
+			fi1002_ai_fl,		fi1004_ai_fl, 		slt1001_ai_ph
+		)
+		select
+			#{lt501AiLev}, 		#{fte203aAiFl}, 	#{fte203aAiFlsm}, 		#{dt501AiPh}, 		#{fi805aAiFl},
+			#{fq1003AiFlsm}, 	#{fi1003AiFl}, 		#{fq1003AiFlsm03}, 		#{pei1003AiFl},		to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS'),
+			#{flag},	 		#{fi501AlFl},		#{fi502AlFl},			#{fi501AiFl},		#{fi502AiFl},
+			#{fi1002AiFl},		#{fi1004AiFl},		#{slt1001AiPh}
+		where not exists(select * from TEMP)
+
+	</insert>
+
+
+
+
+	<insert id="insert_prcs_anly_stng_tag_clct"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_stng_tag_clct">
+
+		with TEMP as
+		(
+			update st_intelligent_schema.prcs_anly_stng_tag_clct set
+				  lt101_ai_lev		 = #{lt101AiLev}
+				 ,lt101_ao_levh0s    = #{lt101AoLevh0s}
+				 ,lt101_ao_levh1s    = #{lt101AoLevh1s}
+				 ,lt101_ao_levh2s    = #{lt101AoLevh2s}
+				 ,lt101_ao_levh3s    = #{lt101AoLevh3s}
+				 ,lt101_ao_levh4s    = #{lt101AoLevh4s}
+				 ,lt101_ao_levh5s    = #{lt101AoLevh5s}
+				 ,lt101_ao_levh6s    = #{lt101AoLevh6s}
+				 ,lt101_ao_levh7s    = #{lt101AoLevh7s}
+				 ,lt101_ao_levh8s    = #{lt101AoLevh8s}
+				 ,lt101_ao_levh9s    = #{lt101AoLevh9s}
+				 ,lt101_ao_levh10s   = #{lt101AoLevh10s}
+				 ,lt101_ao_levh11s   = #{lt101AoLevh11s}
+				 ,lt101_ao_levh12s   = #{lt101AoLevh12s}
+				 ,lt101_ao_levh13s   = #{lt101AoLevh13s}
+				 ,lt101_ao_levh14s   = #{lt101AoLevh14s}
+				 ,lt101_ao_levh15s   = #{lt101AoLevh15s}
+				 ,lt101_ao_levh16s   = #{lt101AoLevh16s}
+				 ,lt101_ao_levh17s   = #{lt101AoLevh17s}
+				 ,m117_ao_fqh1s      = #{m117AoFqh1s}
+				 ,m117_ao_fqh2s      = #{m117AoFqh2s}
+				 ,m117_ao_fqh3s      = #{m117AoFqh3s}
+				 ,m117_ao_fqh4s      = #{m117AoFqh4s}
+				 ,m117_ao_fqh5s      = #{m117AoFqh5s}
+				 ,m117_ao_fqh6s      = #{m117AoFqh6s}
+				 ,m117_ao_fqh7s      = #{m117AoFqh7s}
+				 ,m117_ao_fqh8s      = #{m117AoFqh8s}
+				 ,m117_ao_fqh9s      = #{m117AoFqh9s}
+				 ,m117_ao_fqh10s     = #{m117AoFqh10s}
+				 ,m117_ao_fqh11s     = #{m117AoFqh11s}
+				 ,m117_ao_fqh12s     = #{m117AoFqh12s}
+				 ,m117_ao_fqh13s     = #{m117AoFqh13s}
+				 ,m117_ao_fqh14s     = #{m117AoFqh14s}
+				 ,m117_ao_fqh15s     = #{m117AoFqh15s}
+				 ,m117_ao_fqh16s     = #{m117AoFqh16s}
+				 ,m117_ao_fqh17s     = #{m117AoFqh17s}
+				 ,m207a_ai_zt        = #{m207aAiZt}
+				 ,m207a_ao_sv1s      = #{m207aAoSv1s}
+				 ,m207a_ao_sv2s      = #{m207aAoSv2s}
+				 ,m207a_ao_sv3s      = #{m207aAoSv3s}
+				 ,m207a_ao_sv4s      = #{m207aAoSv4s}
+				 ,m207a_ao_sv5s      = #{m207aAoSv5s}
+				 ,m207a_ao_sv6s      = #{m207aAoSv6s}
+				 ,m207a_ao_sv7s      = #{m207aAoSv7s}
+				 ,m207a_ao_sv8s      = #{m207aAoSv8s}
+				 ,m207b_ai_zt        = #{m207bAiZt}
+				 ,m207b_ao_sv1s      = #{m207bAoSv1s}
+				 ,m207b_ao_sv2s      = #{m207bAoSv2s}
+				 ,m207b_ao_sv3s      = #{m207bAoSv3s}
+				 ,m207b_ao_sv4s      = #{m207bAoSv4s}
+				 ,m207b_ao_sv5s      = #{m207bAoSv5s}
+				 ,m207b_ao_sv6s      = #{m207bAoSv6s}
+				 ,m207b_ao_sv7s      = #{m207bAoSv7s}
+				 ,m207b_ao_sv8s      = #{m207bAoSv8s}
+				 ,m117_ao_rus01  	 = #{m117AoRus01}
+				 ,m117_ao_rus02  	 = #{m117AoRus02}
+				 ,m117_ao_rus03  	 = #{m117AoRus03}
+				 ,m117_ao_rus04  	 = #{m117AoRus04}
+
+				 ,m405a_ao_hzs01  	 = #{m405aAoHzs01}
+				 ,m405a_ao_hzs02	 = #{m405aAoHzs02}
+				 ,m405b_ao_hzs01  	 = #{m405bAoHzs01}
+				 ,m405b_ao_hzs02	 = #{m405bAoHzs02}
+
+				 ,ao_pcsc05			 = #{aoPcsc05}
+
+				 ,m405a_di_ru		=#{m405aDiRu}
+    			 ,m405b_di_ru    	=#{m405bDiRu}
+    			 ,m405c_di_ru   	=#{m405cDiRu}
+    			 ,ao_pcsc03  		=#{aoPcsc03}
+    			 ,ao_pcs03   		=#{aoPcs03}
+
+
+
+
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+
+		insert into st_intelligent_schema.prcs_anly_stng_tag_clct
+		(
+			  lt101_ai_lev
+			 ,lt101_ao_levh0s
+			 ,lt101_ao_levh1s
+			 ,lt101_ao_levh2s
+			 ,lt101_ao_levh3s
+			 ,lt101_ao_levh4s
+			 ,lt101_ao_levh5s
+			 ,lt101_ao_levh6s
+			 ,lt101_ao_levh7s
+			 ,lt101_ao_levh8s
+			 ,lt101_ao_levh9s
+			 ,lt101_ao_levh10s
+			 ,lt101_ao_levh11s
+			 ,lt101_ao_levh12s
+			 ,lt101_ao_levh13s
+			 ,lt101_ao_levh14s
+			 ,lt101_ao_levh15s
+			 ,lt101_ao_levh16s
+			 ,lt101_ao_levh17s
+			 ,m117_ao_fqh1s
+			 ,m117_ao_fqh2s
+			 ,m117_ao_fqh3s
+			 ,m117_ao_fqh4s
+			 ,m117_ao_fqh5s
+			 ,m117_ao_fqh6s
+			 ,m117_ao_fqh7s
+			 ,m117_ao_fqh8s
+			 ,m117_ao_fqh9s
+			 ,m117_ao_fqh10s
+			 ,m117_ao_fqh11s
+			 ,m117_ao_fqh12s
+			 ,m117_ao_fqh13s
+			 ,m117_ao_fqh14s
+			 ,m117_ao_fqh15s
+			 ,m117_ao_fqh16s
+			 ,m117_ao_fqh17s
+			 ,m207a_ai_zt
+			 ,m207a_ao_sv1s
+			 ,m207a_ao_sv2s
+			 ,m207a_ao_sv3s
+			 ,m207a_ao_sv4s
+			 ,m207a_ao_sv5s
+			 ,m207a_ao_sv6s
+			 ,m207a_ao_sv7s
+			 ,m207a_ao_sv8s
+			 ,m207b_ai_zt
+			 ,m207b_ao_sv1s
+			 ,m207b_ao_sv2s
+			 ,m207b_ao_sv3s
+			 ,m207b_ao_sv4s
+			 ,m207b_ao_sv5s
+			 ,m207b_ao_sv6s
+			 ,m207b_ao_sv7s
+			 ,m207b_ao_sv8s
+			 ,m117_ao_rus01
+			 ,m117_ao_rus02
+			 ,m117_ao_rus03
+			 ,m117_ao_rus04
+			 ,flag
+			 ,recd_dt
+
+			 ,m405a_ao_hzs01
+			 ,m405a_ao_hzs02
+			 ,m405b_ao_hzs01
+			 ,m405b_ao_hzs02
+
+			 ,ao_pcsc05
+
+			 ,m405a_di_ru
+    		 ,m405b_di_ru
+    		 ,m405c_di_ru
+    		 ,ao_pcsc03
+    		 ,ao_pcs03
+
+
+		)
+		select
+		  #{lt101AiLev}
+		 ,#{lt101AoLevh0s}
+		 ,#{lt101AoLevh1s}
+		 ,#{lt101AoLevh2s}
+		 ,#{lt101AoLevh3s}
+		 ,#{lt101AoLevh4s}
+		 ,#{lt101AoLevh5s}
+		 ,#{lt101AoLevh6s}
+		 ,#{lt101AoLevh7s}
+		 ,#{lt101AoLevh8s}
+		 ,#{lt101AoLevh9s}
+		 ,#{lt101AoLevh10s}
+		 ,#{lt101AoLevh11s}
+		 ,#{lt101AoLevh12s}
+		 ,#{lt101AoLevh13s}
+		 ,#{lt101AoLevh14s}
+		 ,#{lt101AoLevh15s}
+		 ,#{lt101AoLevh16s}
+		 ,#{lt101AoLevh17s}
+		 ,#{m117AoFqh1s}
+		 ,#{m117AoFqh2s}
+		 ,#{m117AoFqh3s}
+		 ,#{m117AoFqh4s}
+		 ,#{m117AoFqh5s}
+		 ,#{m117AoFqh6s}
+		 ,#{m117AoFqh7s}
+		 ,#{m117AoFqh8s}
+		 ,#{m117AoFqh9s}
+		 ,#{m117AoFqh10s}
+		 ,#{m117AoFqh11s}
+		 ,#{m117AoFqh12s}
+		 ,#{m117AoFqh13s}
+		 ,#{m117AoFqh14s}
+		 ,#{m117AoFqh15s}
+		 ,#{m117AoFqh16s}
+		 ,#{m117AoFqh17s}
+		 ,#{m207aAiZt}
+		 ,#{m207aAoSv1s}
+		 ,#{m207aAoSv2s}
+		 ,#{m207aAoSv3s}
+		 ,#{m207aAoSv4s}
+		 ,#{m207aAoSv5s}
+		 ,#{m207aAoSv6s}
+		 ,#{m207aAoSv7s}
+		 ,#{m207aAoSv8s}
+		 ,#{m207bAiZt}
+		 ,#{m207bAoSv1s}
+		 ,#{m207bAoSv2s}
+		 ,#{m207bAoSv3s}
+		 ,#{m207bAoSv4s}
+		 ,#{m207bAoSv5s}
+		 ,#{m207bAoSv6s}
+		 ,#{m207bAoSv7s}
+		 ,#{m207bAoSv8s}
+		 ,#{m117AoRus01}
+		 ,#{m117AoRus02}
+		 ,#{m117AoRus03}
+		 ,#{m117AoRus04}
+		 ,#{flag}
+ 		 ,to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+
+ 		 ,#{m405aAoHzs01}
+		 ,#{m405aAoHzs02}
+		 ,#{m405bAoHzs01}
+		 ,#{m405bAoHzs02}
+
+		 ,#{aoPcsc05}
+
+		 ,#{m405aDiRu}
+    	 ,#{m405bDiRu}
+    	 ,#{m405cDiRu}
+    	 ,#{aoPcsc03}
+    	 ,#{aoPcs03}
+
+		where not exists(select * from TEMP);
+
+
+	</insert>
+
+
+	<insert id="insert_prcs_anly_blow_vol"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_blow_vol">
+		with TEMP as
+		(
+			update st_intelligent_schema.wot_vol_tag_clct set
+				 fi1001_ai_fl		= #{fi1001AiFl}
+				,fi402_ai_fl		= #{fi402AiFl}
+				,fi401a_ai_fl		= #{fi401aAiFl}
+				,fi401b_ai_fl		= #{fi401bAiFl}
+				,fi401c_ai_fl       = #{fi401cAiFl}
+				,fi401d_ai_fl		= #{fi401dAiFl}
+				,do401a_ai_do		= #{do401aAiDo}
+				,do401b_ai_do		= #{do401bAiDo}
+				,do401c_ai_do		= #{do401cAiDo}
+				,do401d_ai_do	    = #{do401dAiDo}
+				,orp402a_ai_orp	    = #{orp402aAiOrp}
+				,orp402b_ai_orp	    = #{orp402bAiOrp}
+				,orp402c_ai_orp		= #{orp402cAiOrp}
+				,mlss403a_ai_mlss	= #{mlss403aAiMlss}
+				,mlss403b_ai_mlss   = #{mlss403bAiMlss}
+				,do1001_ai_do       = #{do1001AiDo}
+				,orp1002_ai_orp     = #{orp1002AiOrp}
+				,mlss1003_ai_mlss   = #{mlss1003AiMlss}
+				,slt1001_ai_ph      = #{slt1001AiPh}
+				,dt404_ai_ph        = #{dt404AiPh}
+				,plt101_ai_lev      = #{plt101AiLev}
+				,m405a_ao_hzs02      = #{m405aAoHzs02}
+				,m405b_ao_hzs02      = #{m405bAoHzs02}
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.wot_vol_tag_clct
+		(
+			fi1001_ai_fl, 		fi402_ai_fl, 		fi401a_ai_fl, 			fi401b_ai_fl, 		fi401c_ai_fl,
+			fi401d_ai_fl, 		do401a_ai_do, 		do401b_ai_do, 			do401c_ai_do, 		do401d_ai_do,
+			orp402a_ai_orp, 	orp402b_ai_orp, 	orp402c_ai_orp, 		mlss403a_ai_mlss, 	mlss403b_ai_mlss,
+			recd_dt, 			p_fi1001_ai_fl, 	p_fi402_ai_fl, 			flag,				do1001_ai_do,
+			orp1002_ai_orp,		mlss1003_ai_mlss,	slt1001_ai_ph,			dt404_ai_ph,		plt101_ai_lev,
+			m405a_ao_hzs02,		m405b_ao_hzs02
+		)
+		select
+			#{fi1001AiFl}, 		#{fi402AiFl}, 		#{fi401aAiFl}, 			#{fi401bAiFl}, 		#{fi401cAiFl},
+			#{fi401dAiFl}, 		#{do401aAiDo}, 		#{do401bAiDo}, 			#{do401cAiDo}, 		#{do401dAiDo},
+			#{orp402aAiOrp}, 	#{orp402bAiOrp}, 	#{orp402cAiOrp}, 		#{mlss403aAiMlss},	#{mlss403bAiMlss},
+			to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS'), 		#{pFi1001AiFl}, 	#{pFi402AiFl}, 			#{flag}, 	#{do1001AiDo},
+			#{orp1002AiOrp},	#{mlss1003AiMlss},	#{slt1001AiPh},			#{dt404AiPh},		#{plt101AiLev},
+			#{m405aAoHzs02},	#{m405bAoHzs02}
+		where not exists(select * from TEMP)
+
+	</insert>
+
+	<insert id="insert_prcs_anly_infl"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_infl">
+		with TEMP as
+		(
+			update st_intelligent_schema.infl_vol_tag_clct set
+				 fi102_ai_fl	 = #{fi102AiFl}
+				,fi804_ai_fl     = #{fi804AiFl}
+				,p_fi102_ai_fl   = #{pFi102AiFl}
+				,p_fi101_ai_fl   = #{pFi101AiFl}
+				,fi201_ai_fl	 = #{fi201AiFl}
+				,lt201_ai_lev    = #{lt201AiLev}
+				,fte101_ai_fl    = #{fte101AiFl}
+				,fi101_ai_fl     = #{fi101AiFl}
+				,fi301_ai_fl     = #{fi301AiFl}
+				,lt101_ai_lev	 = #{lt101AiLev}
+				,ftn101_ai_fl	 = #{ftn101AiFl}
+				,ftn102_ai_fl	 = #{ftn102AiFl}
+				,fi601_ai_fl	 = #{fi601AiFl}
+				,fi701_ai_fl	 = #{fi701AiFl}
+
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.infl_vol_tag_clct
+		(
+			 fi102_ai_fl
+			,fi804_ai_fl
+			,recd_dt
+			,p_fi102_ai_fl
+			,p_fi101_ai_fl
+			,flag
+			,fi201_ai_fl
+			,lt201_ai_lev
+			,fte101_ai_fl
+			,fi101_ai_fl
+			,fi301_ai_fl
+			,lt101_ai_lev
+			,ftn101_ai_fl
+			,ftn102_ai_fl
+			,fi601_ai_fl
+			,fi701_ai_fl
+		)
+		select
+			 #{fi102AiFl}
+			,#{fi804AiFl}
+			,to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+			,#{pFi102AiFl}
+			,#{pFi101AiFl}
+			,#{flag}
+			,#{fi201AiFl}
+			,#{lt201AiLev}
+			,#{fte101AiFl}
+			,#{fi101AiFl}
+			,#{fi301AiFl}
+			,#{lt101AiLev}
+			,#{ftn101AiFl}
+			,#{ftn102AiFl}
+			,#{fi601AiFl}
+			,#{fi701AiFl}
+		where not exists(select * from TEMP)
+
+
+	</insert>
+
+	<insert id="insert_prcs_anly_new_fclt"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_new_fclt">
+
+		with TEMP as
+		(
+			update st_intelligent_schema.new_eqp_tag_clct set
+				 toc301_ai_toc		= #{toc301AiToc}
+				,do1002_ai_do   	= #{do1002AiDo}
+				,nh1002_ai_nh4		= #{nh1002AiNh4}
+				,no1002_ai_no3   	= #{no1002AiNo3}
+				,orp402a_ai_orp   	= #{orp402aAiOrp}
+				,orp402b_ai_orp   	= #{orp402bAiOrp}
+				,orp402c_ai_orp   	= #{orp402cAiOrp}
+				,ss201_ai_ss		= #{ss201AiSs}
+				,ss501_ai_ss  	 	= #{ss501AiSs}
+				,ss1002_ai_ss   	= #{ss1002AiSs}
+				,slt502a_ai_slt   	= #{slt502aAiSlt}
+				,slt502b_ai_slt   	= #{slt502bAiSlt}
+				,slt502c_ai_slt		= #{slt502cAiSlt}
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.new_eqp_tag_clct
+		(
+			 toc301_ai_toc
+			,do1002_ai_do
+			,nh1002_ai_nh4
+			,no1002_ai_no3
+			,orp402a_ai_orp
+			,orp402b_ai_orp
+			,orp402c_ai_orp
+			,ss201_ai_ss
+			,ss501_ai_ss
+			,ss1002_ai_ss
+			,slt502a_ai_slt
+			,slt502b_ai_slt
+			,slt502c_ai_slt
+			,recd_dt
+			,flag
+		)
+		select
+			 #{toc301AiToc}
+			 ,#{do1002AiDo}
+			 ,#{nh1002AiNh4}
+			 ,#{no1002AiNo3}
+			 ,#{orp402aAiOrp}
+			 ,#{orp402bAiOrp}
+			 ,#{orp402cAiOrp}
+			 ,#{ss201AiSs}
+			 ,#{ss501AiSs}
+			 ,#{ss1002AiSs}
+			 ,#{slt502aAiSlt}
+			 ,#{slt502bAiSlt}
+			 ,#{slt502cAiSlt}
+			 ,to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+			 ,#{flag}
+
+		where not exists(select * from TEMP)
+
+	</insert>
+
+
+
+	<insert id="insert_prcs_mntr_tag_alrm"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_mntr_tag_alrm">
+
+		with TEMP as
+			(
+				update st_intelligent_schema.tag_alarm
+				 tag_tbl				= #{tagTbl}
+				,alrm_dscr              = #{alrmDscr}
+				,alrm_stt               = #{alrmStt}
+				,alrm_stt_dscr          = #{alrmSttDscr}
+				,tag_val                = #{tagVal}
+				whereinsert_syst_mngm_alrm_hist
+					and tag_id = #{tagId}
+					returning *
+			)
+			insert into st_intelligent_schema.tag_alarm
+			(
+				 tag_tbl
+				,tag_tbl_col_id
+				,tag_id
+				,alrm_dscr
+				,recd_dt
+				,alrm_stt
+				,alrm_stt_dscr
+				,alrm_stt_update_time
+				,tag_val
+			)
+			select
+				  #{tagTbl}
+				 ,null
+				 ,#{tagId}
+				 ,#{alrmDscr}
+				 ,to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				 ,#{alrmStt}
+				 ,#{alrmSttDscr}
+				  ,null
+				 ,#{tagVal}
+			where not exists(select * from TEMP)
+
+	</insert>
+
+
+	<insert id="insert_syst_mngm_alrm_hist"
+		parameterType="mone.db.dto.PostgresResDTO$syst_mngm_alrm_hist">
+		with TEMP as
+			(
+				update st_intelligent_schema.alarm_hst
+					alrm_level    		=   #{alrmLevel}
+				    category            =   #{category}
+				    content             =   #{content}
+				    confirm_time        =   #{confirmTime}
+                    action_details      =   #{actionDetails}
+                    confirmor_name      =   #{confirmorName}
+                    action_flag         =   #{actionFlag}
+
+					recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+
+					returning *
+			)
+			insert into st_intelligent_schema.alarm_hst
+			(
+				 alrm_level
+				,category
+				,content
+				,recd_dt
+				,confirm_time
+				,action_details
+				,confirmor_name
+				,action_flag
+			)
+			select
+				 #{alrmLevel}
+				 ,#{category}
+				 ,#{content}
+				 ,to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				 ,#{confirmTime}
+				 ,#{actionDetails}
+				 ,#{confirmorName}
+				 ,#{actionFlag}
+			where not exists(select * from TEMP)
+
+	</insert>
+
+	<insert id="scda_data_minute_trend_history"
+		parameterType="mone.db.dto.PostgresResDTO$scdaDataMinuteTrendHistory">
+		with TEMP as
+		(
+			update st_intelligent_schema.tag_hst set
+				 t00		= #{t00}			,t01			= #{t01}		 ,t02		 = #{t02}			,t03			= #{t03}		,t04		= #{t04}
+				,t05		= #{t05}			,t06			= #{t06}		 ,t07		 = #{t07}			,t08			= #{t08}		,t09        = #{t09}
+				,t10		= #{t10}			,t11			= #{t11}		 ,t12		 = #{t12}			,t13			= #{t13}		,t14        = #{t14}
+				,t15		= #{t15}			,t16			= #{t16}		 ,t17		 = #{t17}			,t18			= #{t18}		,t19        = #{t19}
+				,t20		= #{t20}			,t21			= #{t21}		 ,t22		 = #{t22}			,t23			= #{t23}		,t24        = #{t24}
+				,t25		= #{t25}			,t26			= #{t26}		 ,t27		 = #{t27}			,t28			= #{t28}		,t29        = #{t29}
+				,t30		= #{t30}			,t31			= #{t31}		 ,t32		 = #{t32}			,t33			= #{t33}		,t34        = #{t34}
+				,t35		= #{t35}			,t36			= #{t36}		 ,t37		 = #{t37}			,t38			= #{t38}		,t39        = #{t39}
+				,t40		= #{t40}			,t41			= #{t41}		 ,t42		 = #{t42}			,t43			= #{t43}		,t44        = #{t44}
+				,t45		= #{t45}			,t46			= #{t46}		 ,t47		 = #{t47}			,t48			= #{t48}		,t49        = #{t49}
+				,t50		= #{t50}			,t51			= #{t51}		 ,t52		 = #{t52}			,t53			= #{t53}		,t54        = #{t54}
+				,t55		= #{t55}			,t56			= #{t56}		 ,t57		 = #{t57}			,t58			= #{t58}		,t59        = #{t59}
+				,t00_status	= #{t00Status}		,t01_status		= #{t01Status}	 ,t02_status = #{t02Status}		,t03_status		= #{t03Status}	,t04_status = #{t04Status}
+				,t05_status	= #{t05Status}		,t06_status		= #{t06Status}	 ,t07_status = #{t07Status}		,t08_status		= #{t08Status}	,t09_status = #{t09Status}
+				,t10_status	= #{t10Status}		,t11_status		= #{t11Status}	 ,t12_status = #{t12Status}		,t13_status		= #{t13Status}	,t14_status = #{t14Status}
+				,t15_status	= #{t15Status}		,t16_status		= #{t16Status}	 ,t17_status = #{t17Status}		,t18_status		= #{t18Status}	,t19_status = #{t19Status}
+				,t20_status	= #{t20Status}		,t21_status		= #{t21Status}	 ,t22_status = #{t22Status}		,t23_status		= #{t23Status}	,t24_status = #{t24Status}
+				,t25_status	= #{t25Status}		,t26_status		= #{t26Status}	 ,t27_status = #{t27Status}		,t28_status		= #{t28Status}	,t29_status = #{t29Status}
+				,t30_status	= #{t30Status}		,t31_status		= #{t31Status}	 ,t32_status = #{t32Status}		,t33_status		= #{t33Status}	,t34_status = #{t34Status}
+				,t35_status	= #{t35Status}		,t36_status		= #{t36Status}	 ,t37_status = #{t37Status}		,t38_status		= #{t38Status}	,t39_status = #{t39Status}
+				,t40_status	= #{t40Status}		,t41_status		= #{t41Status}	 ,t42_status = #{t42Status}		,t43_status		= #{t43Status}	,t44_status = #{t44Status}
+				,t45_status	= #{t45Status}		,t46_status		= #{t46Status}	 ,t47_status = #{t47Status}		,t48_status		= #{t48Status}	,t49_status = #{t49Status}
+				,t50_status	= #{t50Status}		,t51_status		= #{t51Status}	 ,t52_status = #{t52Status}		,t53_status		= #{t53Status}	,t54_status = #{t54Status}
+				,t55_status	= #{t55Status}		,t56_status		= #{t56Status}	 ,t57_status = #{t57Status}		,t58_status		= #{t58Status}	,t59_status = #{t59Status}
+				,min_val	= #{minVal}			,min_val_time	= #{minValTime}  ,max_val	 = #{maxVal}		,max_val_time	= #{maxValTime}	,avg_val    = #{avgVal}
+				,collect_dt = #{collectDt}
+			where
+				tag_id =  #{tagId}
+				and record_date = #{recordDate}
+				and record_time = #{recordTime}
+				returning *
+		)
+		insert into st_intelligent_schema.tag_hst
+		(
+			 tag_id			,tag_group_name	,tag_name		,record_date	,record_time
+			,t00			,t01			,t02			,t03			,t04
+			,t05			,t06			,t07			,t08			,t09
+			,t10			,t11			,t12			,t13			,t14
+			,t15			,t16			,t17			,t18			,t19
+			,t20			,t21			,t22			,t23			,t24
+			,t25			,t26			,t27			,t28			,t29
+			,t30			,t31			,t32			,t33			,t34
+			,t35			,t36			,t37			,t38			,t39
+			,t40			,t41			,t42			,t43			,t44
+			,t45			,t46			,t47			,t48			,t49
+			,t50			,t51			,t52			,t53			,t54
+			,t55			,t56			,t57			,t58			,t59
+			,t00_status		,t01_status		,t02_status		,t03_status		,t04_status
+			,t05_status		,t06_status		,t07_status		,t08_status		,t09_status
+			,t10_status		,t11_status		,t12_status		,t13_status		,t14_status
+			,t15_status		,t16_status		,t17_status		,t18_status		,t19_status
+			,t20_status		,t21_status		,t22_status		,t23_status		,t24_status
+			,t25_status		,t26_status		,t27_status		,t28_status		,t29_status
+			,t30_status		,t31_status		,t32_status		,t33_status		,t34_status
+			,t35_status		,t36_status		,t37_status		,t38_status		,t39_status
+			,t40_status		,t41_status		,t42_status		,t43_status		,t44_status
+			,t45_status		,t46_status		,t47_status		,t48_status		,t49_status
+			,t50_status		,t51_status		,t52_status		,t53_status		,t54_status
+			,t55_status		,t56_status		,t57_status		,t58_status		,t59_status
+			,min_val		,min_val_time	,max_val		,max_val_time	,avg_val
+			,sum_val		,collect_dt
+		)
+		select
+			 #{tagId}		,#{tagGroupName},#{tagName}		,#{recordDate}	,#{recordTime}
+			,#{t00}			,#{t01}			,#{t02}			,#{t03}			,#{t04}
+			,#{t05}			,#{t06}			,#{t07}			,#{t08}			,#{t09}
+			,#{t10}			,#{t11}			,#{t12}			,#{t13}			,#{t14}
+			,#{t15}			,#{t16}			,#{t17}			,#{t18}			,#{t19}
+			,#{t20}			,#{t21}			,#{t22}			,#{t23}			,#{t24}
+			,#{t25}			,#{t26}			,#{t27}			,#{t28}			,#{t29}
+			,#{t30}			,#{t31}			,#{t32}			,#{t33}			,#{t34}
+			,#{t35}			,#{t36}			,#{t37}			,#{t38}			,#{t39}
+			,#{t40}			,#{t41}			,#{t42}			,#{t43}			,#{t44}
+			,#{t45}			,#{t46}			,#{t47}			,#{t48}			,#{t49}
+			,#{t50}			,#{t51}			,#{t52}			,#{t53}			,#{t54}
+			,#{t55}			,#{t56}			,#{t57}			,#{t58}			,#{t59}
+			,#{t00Status}	,#{t01Status}	,#{t02Status}	,#{t03Status}	,#{t04Status}
+			,#{t05Status}	,#{t06Status}	,#{t07Status}	,#{t08Status}	,#{t09Status}
+			,#{t10Status}	,#{t11Status}	,#{t12Status}	,#{t13Status}	,#{t14Status}
+			,#{t15Status}	,#{t16Status}	,#{t17Status}	,#{t18Status}	,#{t19Status}
+			,#{t20Status}	,#{t21Status}	,#{t22Status}	,#{t23Status}	,#{t24Status}
+			,#{t25Status}	,#{t26Status}	,#{t27Status}	,#{t28Status}	,#{t29Status}
+			,#{t30Status}	,#{t31Status}	,#{t32Status}	,#{t33Status}	,#{t34Status}
+			,#{t35Status}	,#{t36Status}	,#{t37Status}	,#{t38Status}	,#{t39Status}
+			,#{t40Status}	,#{t41Status}	,#{t42Status}	,#{t43Status}	,#{t44Status}
+			,#{t45Status}	,#{t46Status}	,#{t47Status}	,#{t48Status}	,#{t49Status}
+			,#{t50Status}	,#{t51Status}	,#{t52Status}	,#{t53Status}	,#{t54Status}
+			,#{t55Status}	,#{t56Status}	,#{t57Status}	,#{t58Status}	,#{t59Status}
+			,#{minVal}		,#{minValTime}	,#{maxVal}		,#{maxValTime}	,#{avgVal}
+			,#{sumVal}		,#{collectDt}
+		where not exists(select * from TEMP)
+
+
+	</insert>
+
+	<select id="select_chk_alram_condtion" resultType="mone.db.dto.PostgresResDTO$chk_alram_condtion" parameterType="java.util.Map">
+		select
+				 tag_id
+				,above_prcp_alarm_minv
+				,above_prcp_alarm_maxv
+				,alarm_expln
+		from st_intelligent_schema.tag_alarm_crtr_val where tag_id = #{tagId}
+	</select>
+
+
+	<insert id="insert_prcs_anly_infl_pump"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_infl_pump">
+		with TEMP as
+		(
+			update st_intelligent_schema.infl_pump_pwrer_tag_clct set
+
+				 m117a_ai_w     = #{m117aAiW}
+				,m117a_ai_wh    = #{m117aAiWh}
+				,m117b_ai_w     = #{m117bAiW}
+				,m117b_ai_wh    = #{m117bAiWh}
+				,m117c_ai_w     = #{m117cAiW}
+				,m117c_ai_wh    = #{m117cAiWh}
+				,m118_ai_w      = #{m118AiW}
+				,m118_ai_wh     = #{m118AiWh}
+
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.infl_pump_pwrer_tag_clct
+		(
+			 m117a_ai_w
+			,m117a_ai_wh
+			,m117b_ai_w
+			,m117b_ai_wh
+			,m117c_ai_w
+			,m117c_ai_wh
+			,m118_ai_w
+			,m118_ai_wh
+			,flag
+			,recd_dt
+
+		)
+		select
+             #{m117aAiW}
+            ,#{m117aAiWh}
+            ,#{m117bAiW}
+            ,#{m117bAiWh}
+            ,#{m117cAiW}
+            ,#{m117cAiWh}
+            ,#{m118AiW}
+            ,#{m118AiWh}
+			,#{flag}
+			,to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+
+		where not exists(select * from TEMP)
+
+
+	</insert>
+
+	<insert id="insert_prcs_anly_pwr"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_pwr">
+
+		with TEMP as
+		(
+			update st_intelligent_schema.pwrer_tag_clct set
+				 m117a_ai_w		 = #{m117aAiW}
+				,m117a_ai_wh	 = #{m117aAiWh}
+				,m117a_ai_per    = #{m117aAiPer}
+				,m117b_ai_w      = #{m117bAiW}
+				,m117b_ai_wh     = #{m117bAiWh}
+				,m117b_ai_per    = #{m117bAiPer}
+				,m117c_ai_w      = #{m117cAiW}
+				,m117c_ai_wh     = #{m117cAiWh}
+				,m117c_ai_per    = #{m117cAiPer}
+				,m118_ai_w       = #{m118AiW}
+				,m118_ai_wh      = #{m118AiWh}
+				,m118_ai_per     = #{m118AiPer}
+				,m405a_ai_w      = #{m405aAiW}
+				,m405a_ai_wh     = #{m405aAiWh}
+				,m405a_ai_per    = #{m405aAiPer}
+				,m405b_ai_w      = #{m405bAiW}
+				,m405b_ai_wh     = #{m405bAiWh}
+				,m405b_ai_per    = #{m405bAiPer}
+				,m1002a_ai_w     = #{m1002aAiW}
+				,m1002a_ai_wh    = #{m1002aAiWh}
+				,m1002a_ai_per   = #{m1002aAiPer}
+				,m1002b_ai_w     = #{m1002bAiW}
+				,m1002b_ai_wh    = #{m1002bAiWh}
+				,m1002b_ai_per   = #{m1002bAiPer}
+				,m820a_ai_w      = #{m820aAiW}
+				,m820a_ai_wh     = #{m820aAiWh}
+				,m820a_ai_per    = #{m820aAiPer}
+				,m820b_ai_w      = #{m820bAiW}
+				,m820b_ai_wh     = #{m820bAiWh}
+				,m820b_ai_per    = #{m820bAiPer}
+				,m805a_ai_w      = #{m805aAiW}
+				,m805a_ai_wh     = #{m805aAiWh}
+				,m805a_ai_per    = #{m805aAiPer}
+				,m805b_ai_w      = #{m805bAiW}
+				,m805b_ai_wh     = #{m805bAiWh}
+				,m805b_ai_per    = #{m805bAiPer}
+				,m505a_ai_w      = #{m505aAiW}
+				,m505a_ai_wh     = #{m505aAiWh}
+				,m505a_ai_per    = #{m505aAiPer}
+				,m505c_ai_w      = #{m505cAiW}
+				,m505c_ai_wh     = #{m505cAiWh}
+				,m505c_ai_per    = #{m505cAiPer}
+
+				,m117a_ai_ar     = #{m117aAiAr}
+				,m117a_ai_as     = #{m117aAiAs}
+				,m117a_ai_at     = #{m117aAiAt}
+				,m117b_ai_ar     = #{m117bAiAr}
+				,m117b_ai_as     = #{m117bAiAs}
+				,m117b_ai_at     = #{m117bAiAt}
+				,m117c_ai_ar     = #{m117cAiAr}
+				,m117c_ai_as     = #{m117cAiAs}
+				,m117c_ai_at     = #{m117cAiAt}
+				,m118_ai_ar      = #{m118AiAr}
+				,m118_ai_as      = #{m118AiAs}
+				,m118_ai_at      = #{m118AiAt}
+				,m405a_ai_ar     = #{m405aAiAr}
+				,m405a_ai_as     = #{m405aAiAs}
+				,m405a_ai_at     = #{m405aAiAt}
+				,m405b_ai_ar     = #{m405bAiAr}
+				,m405b_ai_as     = #{m405bAiAs}
+				,m405b_ai_at     = #{m405bAiAt}
+				,m1002a_ai_ar    = #{m1002aAiAr}
+				,m1002a_ai_as    = #{m1002aAiAs}
+				,m1002a_ai_at    = #{m1002aAiAt}
+				,m1002b_ai_ar    = #{m1002bAiAr}
+				,m1002b_ai_as    = #{m1002bAiAs}
+				,m1002b_ai_at    = #{m1002bAiAt}
+				,m820a_ai_ar     = #{m820aAiAr}
+				,m820a_ai_as     = #{m820aAiAs}
+				,m820a_ai_at     = #{m820aAiAt}
+				,m820b_ai_ar     = #{m820bAiAr}
+				,m820b_ai_as     = #{m820bAiAs}
+				,m820b_ai_at     = #{m820bAiAt}
+				,m805a_ai_ar     = #{m805aAiAr}
+				,m805a_ai_as     = #{m805aAiAs}
+				,m805a_ai_at     = #{m805aAiAt}
+				,m805b_ai_ar     = #{m805bAiAr}
+				,m805b_ai_as     = #{m805bAiAs}
+				,m805b_ai_at     = #{m805bAiAt}
+				,m505a_ai_ar     = #{m505aAiAr}
+				,m505a_ai_as     = #{m505aAiAs}
+				,m505a_ai_at     = #{m505aAiAt}
+				,m505c_ai_ar     = #{m505cAiAr}
+				,m505c_ai_as     = #{m505cAiAs}
+				,m505c_ai_at     = #{m505cAiAt}
+
+				,m117a_ai_vr	= #{m117aAiVr}
+				,m117a_ai_vs    = #{m117aAiVs}
+				,m117a_ai_vt    = #{m117aAiVt}
+				,m117b_ai_vr    = #{m117bAiVr}
+				,m117b_ai_vs    = #{m117bAiVs}
+				,m117b_ai_vt    = #{m117bAiVt}
+				,m117c_ai_vr    = #{m117cAiVr}
+				,m117c_ai_vs    = #{m117cAiVs}
+				,m117c_ai_vt    = #{m117cAiVt}
+				,m118_ai_vr     = #{m118AiVr}
+				,m118_ai_vs     = #{m118AiVs}
+				,m118_ai_vt     = #{m118AiVt}
+				,m405a_ai_vr    = #{m405aAiVr}
+				,m405a_ai_vs    = #{m405aAiVs}
+				,m405a_ai_vt    = #{m405aAiVt}
+				,m405b_ai_vr    = #{m405bAiVr}
+				,m405b_ai_vs    = #{m405bAiVs}
+				,m405b_ai_vt    = #{m405bAiVt}
+				,m1002a_ai_vr   = #{m1002aAiVr}
+				,m1002a_ai_vs   = #{m1002aAiVs}
+				,m1002a_ai_vt   = #{m1002aAiVt}
+				,m1002b_ai_vr   = #{m1002bAiVr}
+				,m1002b_ai_vs   = #{m1002bAiVs}
+				,m1002b_ai_vt   = #{m1002bAiVt}
+				,m820a_ai_vr    = #{m820aAiVr}
+				,m820a_ai_vs    = #{m820aAiVs}
+				,m820a_ai_vt    = #{m820aAiVt}
+				,m820b_ai_vr    = #{m820bAiVr}
+				,m820b_ai_vs    = #{m820bAiVs}
+				,m820b_ai_vt    = #{m820bAiVt}
+				,m805a_ai_vr    = #{m805aAiVr}
+				,m805a_ai_vs    = #{m805aAiVs}
+				,m805a_ai_vt    = #{m805aAiVt}
+				,m805b_ai_vr    = #{m805bAiVr}
+				,m805b_ai_vs    = #{m805bAiVs}
+				,m805b_ai_vt    = #{m805bAiVt}
+				,m505a_ai_vr    = #{m505aAiVr}
+				,m505a_ai_vs    = #{m505aAiVs}
+				,m505a_ai_vt    = #{m505aAiVt}
+
+				,m505b_ai_ar    = #{m505bAiAr}
+				,m505b_ai_as    = #{m505bAiAs}
+				,m505b_ai_at    = #{m505bAiAt}
+
+				,m505c_ai_vr    = #{m505cAiVr}
+				,m505c_ai_vs    = #{m505cAiVs}
+				,m505c_ai_vt    = #{m505cAiVt}
+
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.pwrer_tag_clct
+		(
+			 m117a_ai_w
+			,m117a_ai_wh
+			,m117a_ai_per
+			,m117b_ai_w
+			,m117b_ai_wh
+			,m117b_ai_per
+			,m117c_ai_w
+			,m117c_ai_wh
+			,m117c_ai_per
+			,m118_ai_w
+			,m118_ai_wh
+			,m118_ai_per
+			,m405a_ai_w
+			,m405a_ai_wh
+			,m405a_ai_per
+			,m405b_ai_w
+			,m405b_ai_wh
+			,m405b_ai_per
+			,m1002a_ai_w
+			,m1002a_ai_wh
+			,m1002a_ai_per
+			,m1002b_ai_w
+			,m1002b_ai_wh
+			,m1002b_ai_per
+			,m820a_ai_w
+			,m820a_ai_wh
+			,m820a_ai_per
+			,m820b_ai_w
+			,m820b_ai_wh
+			,m820b_ai_per
+			,m805a_ai_w
+			,m805a_ai_wh
+			,m805a_ai_per
+			,m805b_ai_w
+			,m805b_ai_wh
+			,m805b_ai_per
+			,m505a_ai_w
+			,m505a_ai_wh
+			,m505a_ai_per
+			,m505c_ai_w
+			,m505c_ai_wh
+			,m505c_ai_per
+			,recd_dt
+			,flag
+
+			,m117a_ai_ar
+			,m117a_ai_as
+			,m117a_ai_at
+			,m117b_ai_ar
+			,m117b_ai_as
+			,m117b_ai_at
+			,m117c_ai_ar
+			,m117c_ai_as
+			,m117c_ai_at
+			,m118_ai_ar
+			,m118_ai_as
+			,m118_ai_at
+			,m405a_ai_ar
+			,m405a_ai_as
+			,m405a_ai_at
+			,m405b_ai_ar
+			,m405b_ai_as
+			,m405b_ai_at
+			,m1002a_ai_ar
+			,m1002a_ai_as
+			,m1002a_ai_at
+			,m1002b_ai_ar
+			,m1002b_ai_as
+			,m1002b_ai_at
+			,m820a_ai_ar
+			,m820a_ai_as
+			,m820a_ai_at
+			,m820b_ai_ar
+			,m820b_ai_as
+			,m820b_ai_at
+			,m805a_ai_ar
+			,m805a_ai_as
+			,m805a_ai_at
+			,m805b_ai_ar
+			,m805b_ai_as
+			,m805b_ai_at
+			,m505a_ai_ar
+			,m505a_ai_as
+			,m505a_ai_at
+			,m505c_ai_ar
+			,m505c_ai_as
+			,m505c_ai_at
+
+			,m117a_ai_vr
+			,m117a_ai_vs
+			,m117a_ai_vt
+			,m117b_ai_vr
+			,m117b_ai_vs
+			,m117b_ai_vt
+			,m117c_ai_vr
+			,m117c_ai_vs
+			,m117c_ai_vt
+			,m118_ai_vr
+			,m118_ai_vs
+			,m118_ai_vt
+			,m405a_ai_vr
+			,m405a_ai_vs
+			,m405a_ai_vt
+			,m405b_ai_vr
+			,m405b_ai_vs
+			,m405b_ai_vt
+			,m1002a_ai_vr
+			,m1002a_ai_vs
+			,m1002a_ai_vt
+			,m1002b_ai_vr
+			,m1002b_ai_vs
+			,m1002b_ai_vt
+			,m820a_ai_vr
+			,m820a_ai_vs
+			,m820a_ai_vt
+			,m820b_ai_vr
+			,m820b_ai_vs
+			,m820b_ai_vt
+			,m805a_ai_vr
+			,m805a_ai_vs
+			,m805a_ai_vt
+			,m805b_ai_vr
+			,m805b_ai_vs
+			,m805b_ai_vt
+			,m505a_ai_vr
+			,m505a_ai_vs
+			,m505a_ai_vt
+			,m505b_ai_ar
+			,m505b_ai_as
+			,m505b_ai_at
+			,m505c_ai_vr
+			,m505c_ai_vs
+			,m505c_ai_vt
+		)
+		select
+			 #{m117aAiW}
+			,#{m117aAiWh}
+			,#{m117aAiPer}
+			,#{m117bAiW}
+			,#{m117bAiWh}
+			,#{m117bAiPer}
+			,#{m117cAiW}
+			,#{m117cAiWh}
+			,#{m117cAiPer}
+			,#{m118AiW}
+			,#{m118AiWh}
+			,#{m118AiPer}
+			,#{m405aAiW}
+			,#{m405aAiWh}
+			,#{m405aAiPer}
+			,#{m405bAiW}
+			,#{m405bAiWh}
+			,#{m405bAiPer}
+			,#{m1002aAiW}
+			,#{m1002aAiWh}
+			,#{m1002aAiPer}
+			,#{m1002bAiW}
+			,#{m1002bAiWh}
+			,#{m1002bAiPer}
+			,#{m820aAiW}
+			,#{m820aAiWh}
+			,#{m820aAiPer}
+			,#{m820bAiW}
+			,#{m820bAiWh}
+			,#{m820bAiPer}
+			,#{m805aAiW}
+			,#{m805aAiWh}
+			,#{m805aAiPer}
+			,#{m805bAiW}
+			,#{m805bAiWh}
+			,#{m805bAiPer}
+			,#{m505aAiW}
+			,#{m505aAiWh}
+			,#{m505aAiPer}
+			,#{m505cAiW}
+			,#{m505cAiWh}
+			,#{m505cAiPer}
+			,to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+			,#{flag}
+
+			,#{m117aAiAr}
+			,#{m117aAiAs}
+			,#{m117aAiAt}
+			,#{m117bAiAr}
+			,#{m117bAiAs}
+			,#{m117bAiAt}
+			,#{m117cAiAr}
+			,#{m117cAiAs}
+			,#{m117cAiAt}
+			,#{m118AiAr}
+			,#{m118AiAs}
+			,#{m118AiAt}
+			,#{m405aAiAr}
+			,#{m405aAiAs}
+			,#{m405aAiAt}
+			,#{m405bAiAr}
+			,#{m405bAiAs}
+			,#{m405bAiAt}
+			,#{m1002aAiAr}
+			,#{m1002aAiAs}
+			,#{m1002aAiAt}
+			,#{m1002bAiAr}
+			,#{m1002bAiAs}
+			,#{m1002bAiAt}
+			,#{m820aAiAr}
+			,#{m820aAiAs}
+			,#{m820aAiAt}
+			,#{m820bAiAr}
+			,#{m820bAiAs}
+			,#{m820bAiAt}
+			,#{m805aAiAr}
+			,#{m805aAiAs}
+			,#{m805aAiAt}
+			,#{m805bAiAr}
+			,#{m805bAiAs}
+			,#{m805bAiAt}
+			,#{m505aAiAr}
+			,#{m505aAiAs}
+			,#{m505aAiAt}
+			,#{m505cAiAr}
+			,#{m505cAiAs}
+			,#{m505cAiAt}
+
+			,#{m117aAiVr}
+			,#{m117aAiVs}
+			,#{m117aAiVt}
+			,#{m117bAiVr}
+			,#{m117bAiVs}
+			,#{m117bAiVt}
+			,#{m117cAiVr}
+			,#{m117cAiVs}
+			,#{m117cAiVt}
+			,#{m118AiVr}
+			,#{m118AiVs}
+			,#{m118AiVt}
+			,#{m405aAiVr}
+			,#{m405aAiVs}
+			,#{m405aAiVt}
+			,#{m405bAiVr}
+			,#{m405bAiVs}
+			,#{m405bAiVt}
+			,#{m1002aAiVr}
+			,#{m1002aAiVs}
+			,#{m1002aAiVt}
+			,#{m1002bAiVr}
+			,#{m1002bAiVs}
+			,#{m1002bAiVt}
+			,#{m820aAiVr}
+			,#{m820aAiVs}
+			,#{m820aAiVt}
+			,#{m820bAiVr}
+			,#{m820bAiVs}
+			,#{m820bAiVt}
+			,#{m805aAiVr}
+			,#{m805aAiVs}
+			,#{m805aAiVt}
+			,#{m805bAiVr}
+			,#{m805bAiVs}
+			,#{m805bAiVt}
+			,#{m505aAiVr}
+			,#{m505aAiVs}
+			,#{m505aAiVt}
+
+			,#{m505bAiAr}
+			,#{m505bAiAs}
+			,#{m505bAiAt}
+
+			,#{m505cAiVr}
+			,#{m505cAiVs}
+			,#{m505cAiVt}
+		where not exists(select * from TEMP)
+
+	</insert>
+
+
+	<insert id="insert_prcs_anly_vbrt"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_vbrt">
+
+		with TEMP as
+		(
+			update st_intelligent_schema.vibrat_tag_clct set
+				  m1002a_ai_kx	= #{m1002aAiKx}
+				, m1002b_ai_kx	= #{m1002bAiKx}
+				, m1007a_ai_kx  = #{m1007aAiKx}
+				, m1007b_ai_kx  = #{m1007bAiKx}
+				, m1201a_ai_kx  = #{m1201aAiKx}
+				, m1201b_ai_kx  = #{m1201bAiKx}
+				, m1207a_ai_kx  = #{m1207aAiKx}
+				, m1207b_ai_kx  = #{m1207bAiKx}
+				, m405a_ai_kx   = #{m405aAiKx}
+				, m405b_ai_kx   = #{m405bAiKx}
+				, m505a_ai_kx   = #{m505aAiKx}
+				, m505b_ai_kx   = #{m505bAiKx}
+				, m805a_ai_kx   = #{m805aAiKx}
+				, m805b_ai_kx   = #{m805bAiKx}
+				, m820a_ai_kx   = #{m820aAiKx}
+				, m820b_ai_kx   = #{m820bAiKx}
+
+				, m1002a_ai_pvx	=#{m1002aAiPvx}
+				, m1002a_ai_pvy =#{m1002aAiPvy}
+				, m1002a_ai_pvz =#{m1002aAiPvz}
+				, m1002a_ai_rax =#{m1002aAiRax}
+				, m1002a_ai_ray =#{m1002aAiRay}
+				, m1002a_ai_raz =#{m1002aAiRaz}
+				, m1002b_ai_pvx =#{m1002bAiPvx}
+				, m1002b_ai_pvy =#{m1002bAiPvy}
+				, m1002b_ai_pvz =#{m1002bAiPvz}
+				, m1002b_ai_rax =#{m1002bAiRax}
+				, m1002b_ai_ray =#{m1002bAiRay}
+				, m1002b_ai_raz =#{m1002bAiRaz}
+				, m1007a_ai_pvx =#{m1007aAiPvx}
+				, m1007a_ai_pvy =#{m1007aAiPvy}
+				, m1007a_ai_pvz =#{m1007aAiPvz}
+				, m1007a_ai_rax =#{m1007aAiRax}
+				, m1007a_ai_ray =#{m1007aAiRay}
+				, m1007a_ai_raz =#{m1007aAiRaz}
+				, m1007b_ai_pvx =#{m1007bAiPvx}
+				, m1007b_ai_pvy =#{m1007bAiPvy}
+				, m1007b_ai_pvz =#{m1007bAiPvz}
+				, m1007b_ai_rax =#{m1007bAiRax}
+				, m1007b_ai_ray =#{m1007bAiRay}
+				, m1007b_ai_raz =#{m1007bAiRaz}
+				, m1201a_ai_pvx =#{m1201aAiPvx}
+				, m1201a_ai_pvy =#{m1201aAiPvy}
+				, m1201a_ai_pvz =#{m1201aAiPvz}
+				, m1201a_ai_rax =#{m1201aAiRax}
+				, m1201a_ai_ray =#{m1201aAiRay}
+				, m1201a_ai_raz =#{m1201aAiRaz}
+				, m1201b_ai_pvx =#{m1201bAiPvx}
+				, m1201b_ai_pvy =#{m1201bAiPvy}
+				, m1201b_ai_pvz =#{m1201bAiPvz}
+				, m1201b_ai_rax =#{m1201bAiRax}
+				, m1201b_ai_ray =#{m1201bAiRay}
+				, m1201b_ai_raz =#{m1201bAiRaz}
+				, m1207a_ai_pvx =#{m1207aAiPvx}
+				, m1207a_ai_pvy =#{m1207aAiPvy}
+				, m1207a_ai_pvz =#{m1207aAiPvz}
+				, m1207a_ai_rax =#{m1207aAiRax}
+				, m1207a_ai_ray =#{m1207aAiRay}
+				, m1207a_ai_raz =#{m1207aAiRaz}
+				, m1207b_ai_pvx =#{m1207bAiPvx}
+				, m1207b_ai_pvy =#{m1207bAiPvy}
+				, m1207b_ai_pvz =#{m1207bAiPvz}
+				, m1207b_ai_rax =#{m1207bAiRax}
+				, m1207b_ai_ray =#{m1207bAiRay}
+				, m1207b_ai_raz =#{m1207bAiRaz}
+				, m405a_ai_pvx  =#{m405aAiPvx}
+				, m405a_ai_pvy  =#{m405aAiPvy}
+				, m405a_ai_pvz  =#{m405aAiPvz}
+				, m405a_ai_rax  =#{m405aAiRax}
+				, m405a_ai_ray  =#{m405aAiRay}
+				, m405a_ai_raz  =#{m405aAiRaz}
+				, m405b_ai_pvx  =#{m405bAiPvx}
+				, m405b_ai_pvy  =#{m405bAiPvy}
+				, m405b_ai_pvz  =#{m405bAiPvz}
+				, m405b_ai_rax  =#{m405bAiRax}
+				, m405b_ai_ray  =#{m405bAiRay}
+				, m405b_ai_raz  =#{m405bAiRaz}
+				, m505a_ai_pvx  =#{m505aAiPvx}
+				, m505a_ai_pvy  =#{m505aAiPvy}
+				, m505a_ai_pvz  =#{m505aAiPvz}
+				, m505a_ai_rax  =#{m505aAiRax}
+				, m505a_ai_ray  =#{m505aAiRay}
+				, m505a_ai_raz  =#{m505aAiRaz}
+				, m505b_ai_pvx  =#{m505bAiPvx}
+				, m505b_ai_pvy  =#{m505bAiPvy}
+				, m505b_ai_pvz  =#{m505bAiPvz}
+				, m505b_ai_rax  =#{m505bAiRax}
+				, m505b_ai_ray  =#{m505bAiRay}
+				, m505b_ai_raz  =#{m505bAiRaz}
+				, m805a_ai_pvx  =#{m805aAiPvx}
+				, m805a_ai_pvy  =#{m805aAiPvy}
+				, m805a_ai_pvz  =#{m805aAiPvz}
+				, m805a_ai_rax  =#{m805aAiRax}
+				, m805a_ai_ray  =#{m805aAiRay}
+				, m805a_ai_raz  =#{m805aAiRaz}
+				, m805b_ai_pvx  =#{m805bAiPvx}
+				, m805b_ai_pvy  =#{m805bAiPvy}
+				, m805b_ai_pvz  =#{m805bAiPvz}
+				, m805b_ai_rax  =#{m805bAiRax}
+				, m805b_ai_ray  =#{m805bAiRay}
+				, m805b_ai_raz  =#{m805bAiRaz}
+				, m820a_ai_pvx  =#{m820aAiPvx}
+				, m820a_ai_pvy  =#{m820aAiPvy}
+				, m820a_ai_pvz  =#{m820aAiPvz}
+				, m820a_ai_rax  =#{m820aAiRax}
+				, m820a_ai_ray  =#{m820aAiRay}
+				, m820a_ai_raz  =#{m820aAiRaz}
+				, m820b_ai_pvx  =#{m820bAiPvx}
+				, m820b_ai_pvy  =#{m820bAiPvy}
+				, m820b_ai_pvz  =#{m820bAiPvz}
+				, m820b_ai_rax  =#{m820bAiRax}
+				, m820b_ai_ray  =#{m820bAiRay}
+				, m820b_ai_raz  =#{m820bAiRaz}
+
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.vibrat_tag_clct
+		(
+			 m1002a_ai_kx
+			,m1002b_ai_kx
+			,m1007a_ai_kx
+			,m1007b_ai_kx
+			,m1201a_ai_kx
+			,m1201b_ai_kx
+			,m1207a_ai_kx
+			,m1207b_ai_kx
+			,m405a_ai_kx
+			,m405b_ai_kx
+			,m505a_ai_kx
+			,m505b_ai_kx
+			,m805a_ai_kx
+			,m805b_ai_kx
+			,m820a_ai_kx
+			,m820b_ai_kx
+			,recd_dt
+			,flag
+
+			, m1002a_ai_pvx
+			, m1002a_ai_pvy
+			, m1002a_ai_pvz
+			, m1002a_ai_rax
+			, m1002a_ai_ray
+			, m1002a_ai_raz
+			, m1002b_ai_pvx
+			, m1002b_ai_pvy
+			, m1002b_ai_pvz
+			, m1002b_ai_rax
+			, m1002b_ai_ray
+			, m1002b_ai_raz
+			, m1007a_ai_pvx
+			, m1007a_ai_pvy
+			, m1007a_ai_pvz
+			, m1007a_ai_rax
+			, m1007a_ai_ray
+			, m1007a_ai_raz
+			, m1007b_ai_pvx
+			, m1007b_ai_pvy
+			, m1007b_ai_pvz
+			, m1007b_ai_rax
+			, m1007b_ai_ray
+			, m1007b_ai_raz
+			, m1201a_ai_pvx
+			, m1201a_ai_pvy
+			, m1201a_ai_pvz
+			, m1201a_ai_rax
+			, m1201a_ai_ray
+			, m1201a_ai_raz
+			, m1201b_ai_pvx
+			, m1201b_ai_pvy
+			, m1201b_ai_pvz
+			, m1201b_ai_rax
+			, m1201b_ai_ray
+			, m1201b_ai_raz
+			, m1207a_ai_pvx
+			, m1207a_ai_pvy
+			, m1207a_ai_pvz
+			, m1207a_ai_rax
+			, m1207a_ai_ray
+			, m1207a_ai_raz
+			, m1207b_ai_pvx
+			, m1207b_ai_pvy
+			, m1207b_ai_pvz
+			, m1207b_ai_rax
+			, m1207b_ai_ray
+			, m1207b_ai_raz
+			, m405a_ai_pvx
+			, m405a_ai_pvy
+			, m405a_ai_pvz
+			, m405a_ai_rax
+			, m405a_ai_ray
+			, m405a_ai_raz
+			, m405b_ai_pvx
+			, m405b_ai_pvy
+			, m405b_ai_pvz
+			, m405b_ai_rax
+			, m405b_ai_ray
+			, m405b_ai_raz
+			, m505a_ai_pvx
+			, m505a_ai_pvy
+			, m505a_ai_pvz
+			, m505a_ai_rax
+			, m505a_ai_ray
+			, m505a_ai_raz
+			, m505b_ai_pvx
+			, m505b_ai_pvy
+			, m505b_ai_pvz
+			, m505b_ai_rax
+			, m505b_ai_ray
+			, m505b_ai_raz
+			, m805a_ai_pvx
+			, m805a_ai_pvy
+			, m805a_ai_pvz
+			, m805a_ai_rax
+			, m805a_ai_ray
+			, m805a_ai_raz
+			, m805b_ai_pvx
+			, m805b_ai_pvy
+			, m805b_ai_pvz
+			, m805b_ai_rax
+			, m805b_ai_ray
+			, m805b_ai_raz
+			, m820a_ai_pvx
+			, m820a_ai_pvy
+			, m820a_ai_pvz
+			, m820a_ai_rax
+			, m820a_ai_ray
+			, m820a_ai_raz
+			, m820b_ai_pvx
+			, m820b_ai_pvy
+			, m820b_ai_pvz
+			, m820b_ai_rax
+			, m820b_ai_ray
+			, m820b_ai_raz
+		)
+		select
+			#{m1002aAiKx}
+			,#{m1002bAiKx}
+			,#{m1007aAiKx}
+			,#{m1007bAiKx}
+			,#{m1201aAiKx}
+			,#{m1201bAiKx}
+			,#{m1207aAiKx}
+			,#{m1207bAiKx}
+			,#{m405aAiKx}
+			,#{m405bAiKx}
+			,#{m505aAiKx}
+			,#{m505bAiKx}
+			,#{m805aAiKx}
+			,#{m805bAiKx}
+			,#{m820aAiKx}
+			,#{m820bAiKx}
+			,to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+			,#{flag}
+
+			,#{m1002aAiPvx}
+			,#{m1002aAiPvy}
+			,#{m1002aAiPvz}
+			,#{m1002aAiRax}
+			,#{m1002aAiRay}
+			,#{m1002aAiRaz}
+			,#{m1002bAiPvx}
+			,#{m1002bAiPvy}
+			,#{m1002bAiPvz}
+			,#{m1002bAiRax}
+			,#{m1002bAiRay}
+			,#{m1002bAiRaz}
+			,#{m1007aAiPvx}
+			,#{m1007aAiPvy}
+			,#{m1007aAiPvz}
+			,#{m1007aAiRax}
+			,#{m1007aAiRay}
+			,#{m1007aAiRaz}
+			,#{m1007bAiPvx}
+			,#{m1007bAiPvy}
+			,#{m1007bAiPvz}
+			,#{m1007bAiRax}
+			,#{m1007bAiRay}
+			,#{m1007bAiRaz}
+			,#{m1201aAiPvx}
+			,#{m1201aAiPvy}
+			,#{m1201aAiPvz}
+			,#{m1201aAiRax}
+			,#{m1201aAiRay}
+			,#{m1201aAiRaz}
+			,#{m1201bAiPvx}
+			,#{m1201bAiPvy}
+			,#{m1201bAiPvz}
+			,#{m1201bAiRax}
+			,#{m1201bAiRay}
+			,#{m1201bAiRaz}
+			,#{m1207aAiPvx}
+			,#{m1207aAiPvy}
+			,#{m1207aAiPvz}
+			,#{m1207aAiRax}
+			,#{m1207aAiRay}
+			,#{m1207aAiRaz}
+			,#{m1207bAiPvx}
+			,#{m1207bAiPvy}
+			,#{m1207bAiPvz}
+			,#{m1207bAiRax}
+			,#{m1207bAiRay}
+			,#{m1207bAiRaz}
+			,#{m405aAiPvx}
+			,#{m405aAiPvy}
+			,#{m405aAiPvz}
+			,#{m405aAiRax}
+			,#{m405aAiRay}
+			,#{m405aAiRaz}
+			,#{m405bAiPvx}
+			,#{m405bAiPvy}
+			,#{m405bAiPvz}
+			,#{m405bAiRax}
+			,#{m405bAiRay}
+			,#{m405bAiRaz}
+			,#{m505aAiPvx}
+			,#{m505aAiPvy}
+			,#{m505aAiPvz}
+			,#{m505aAiRax}
+			,#{m505aAiRay}
+			,#{m505aAiRaz}
+			,#{m505bAiPvx}
+			,#{m505bAiPvy}
+			,#{m505bAiPvz}
+			,#{m505bAiRax}
+			,#{m505bAiRay}
+			,#{m505bAiRaz}
+			,#{m805aAiPvx}
+			,#{m805aAiPvy}
+			,#{m805aAiPvz}
+			,#{m805aAiRax}
+			,#{m805aAiRay}
+			,#{m805aAiRaz}
+			,#{m805bAiPvx}
+			,#{m805bAiPvy}
+			,#{m805bAiPvz}
+			,#{m805bAiRax}
+			,#{m805bAiRay}
+			,#{m805bAiRaz}
+			,#{m820aAiPvx}
+			,#{m820aAiPvy}
+			,#{m820aAiPvz}
+			,#{m820aAiRax}
+			,#{m820aAiRay}
+			,#{m820aAiRaz}
+			,#{m820bAiPvx}
+			,#{m820bAiPvy}
+			,#{m820bAiPvz}
+			,#{m820bAiRax}
+			,#{m820bAiRay}
+			,#{m820bAiRaz}
+		where not exists(select * from TEMP)
+
+	</insert>
+
+	<insert id="insert_prcs_anly_denipho"
+		parameterType="mone.db.dto.PostgresResDTO$prcs_anly_new_denipho">
+
+		with TEMP as
+		(
+			update st_intelligent_schema.denipho_sers_msur_dnsty set
+				 nh4_dnsty             				=#{nh4Dnsty}
+				,no3_dnsty             				=#{no3Dnsty}
+				,nh4_tmp             				=#{nh4Tmp}
+				,no3_tmp             				=#{no3Tmp}
+			where
+				recd_dt = to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+				and flag = #{flag}
+				returning *
+		)
+		insert into st_intelligent_schema.denipho_sers_msur_dnsty
+		(
+			 nh4_dnsty
+			,no3_dnsty
+			,nh4_tmp
+			,no3_tmp
+			,recd_dt
+			,flag
+		)
+		select
+			 #{nh4Dnsty}
+			,#{no3Dnsty}
+			,#{nh4Tmp}
+			,#{no3Tmp}
+			,to_timestamp(#{updateTime}, 'YYYY-MM-DD HH24:MI:SS.MS')
+			,#{flag}
+		where not exists(select * from TEMP)
+
+	</insert>
+
+	<insert id="insert_optmz_cntr_data_mlss" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+
+		with
+			MLSS as
+			(
+				update st_intelligent_schema.optmz_cntr_mlss set flag = #{mlssFlag}, mark = #{mlssMark}, status = #{mlssStatus}
+				where
+					recd_dt = to_timestamp(#{mlssRecdDt}, 'YYYY-MM-DD HH24:MI:SS')
+					returning *
+			)
+			insert into st_intelligent_schema.optmz_cntr_mlss ( flag, recd_dt, mark, status	)
+			select  #{mlssFlag} ,to_timestamp(#{mlssRecdDt}, 'YYYY-MM-DD HH24:MI:SS'), #{mlssMark}, #{mlssStatus}
+			where not exists(select * from MLSS)
+	</insert>
+
+	<insert id="insert_optmz_cntr_data_pump" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+		with
+			PUMP as
+			(
+				update st_intelligent_schema.optmz_cntr_pump set flag = #{pumpFlag}, mark = #{pumpMark}, status = #{pumpStatus}
+				where
+					recd_dt = to_timestamp(#{pumpRecdDt}, 'YYYY-MM-DD HH24:MI:SS')
+					returning *
+			)
+			insert into st_intelligent_schema.optmz_cntr_pump ( flag, recd_dt, mark, status)
+			select  #{pumpFlag} ,to_timestamp(#{pumpRecdDt}, 'YYYY-MM-DD HH24:MI:SS'), #{pumpMark}, #{pumpStatus}
+			where not exists(select * from PUMP)
+	</insert>
+
+	<insert id="insert_optmz_cntr_data_psbr" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+		with
+			 PSBR as
+			(
+				update st_intelligent_schema.optmz_cntr_psbr set flag = #{psbrFlag}, mark = #{psbrMark}, status = #{psbrStatus}
+				where
+					recd_dt = to_timestamp(#{psbrRecdDt}, 'YYYY-MM-DD HH24:MI:SS')
+					returning *
+			)
+			insert into st_intelligent_schema.optmz_cntr_psbr ( flag, recd_dt, mark, status	)
+			select  #{psbrFlag} ,to_timestamp(#{psbrRecdDt}, 'YYYY-MM-DD HH24:MI:SS'), #{psbrMark}, #{psbrStatus}
+			where not exists(select * from PSBR)
+	</insert>
+
+	<insert id="insert_optmz_cntr_data_denipho" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+		with
+			DENIPHO as
+			(
+				update st_intelligent_schema.optmz_cntr_denipho set flag = #{deniphoFlag}, mark = #{deniphoMark}, status = #{deniphoStatus}
+				where
+					recd_dt = to_timestamp(#{deniphoRecdDt}, 'YYYY-MM-DD HH24:MI:SS')
+					returning *
+			)
+			insert into st_intelligent_schema.optmz_cntr_denipho ( flag, recd_dt, mark, status	)
+			select  #{deniphoFlag} ,to_timestamp(#{deniphoRecdDt}, 'YYYY-MM-DD HH24:MI:SS'), #{deniphoMark}, #{deniphoStatus}
+			where not exists(select * from DENIPHO)
+	</insert>
+
+	<insert id="insert_optmz_cntr_data_pac" parameterType="mone.db.dto.MariaResDTO$optmz_cntr_data">
+		with
+			PAC as
+			(
+				update st_intelligent_schema.optmz_cntr_pac set flag = #{pacFlag}, mark = #{pacMark}, status = #{pacStatus}
+				where
+					recd_dt = to_timestamp(#{pacRecdDt}, 'YYYY-MM-DD HH24:MI:SS')
+					returning *
+			)
+			insert into st_intelligent_schema.optmz_cntr_pac ( flag, recd_dt, mark, status	)
+			select  #{pacFlag} ,to_timestamp(#{pacRecdDt}, 'YYYY-MM-DD HH24:MI:SS'),  #{pacMark}, #{pacStatus}
+			where not exists(select * from PAC)
+	</insert>
+
+	<update id="update_optmz_cntr_data" parameterType="mone.db.dto.PostgresResDTO$optmz_cntr_data">
+		update
+				<choose>
+					<when test="chkTablenm=='optmz_cntr_pump'">st_intelligent_schema.optmz_cntr_pump</when>
+					<when test="chkTablenm=='optmz_cntr_psbr'">st_intelligent_schema.optmz_cntr_psbr</when>
+					<when test="chkTablenm=='optmz_cntr_denipho'">st_intelligent_schema.optmz_cntr_denipho</when>
+					<when test="chkTablenm=='optmz_cntr_pac'">st_intelligent_schema.optmz_cntr_pac</when>
+					<when test="chkTablenm=='optmz_cntr_mlss'">st_intelligent_schema.optmz_cntr_mlss</when>
+				</choose>
+		set mark='Y'
+			where 	flag in ('opt', 'hmi')
+				and mark <![CDATA[<>]]> 'Y'
+				and recd_dt =  to_timestamp(#{recdDt}, 'YYYY-MM-DD HH24:MI:SS')
+	</update>
+
+
+
+	<select id="select_optmz_cntr_data_pump" resultType="mone.db.dto.PostgresResDTO$optmz_cntr_data" parameterType="java.util.Map">
+
+		SELECT 						optmz_cntr_pump_id,
+						flag 				as 	pump_flag,
+						TO_CHAR(recd_dt , 'YYYY-MM-DD HH24:MI:SS') 			as 	pump_recd_dt,
+						mark 				as 	pump_mark,
+						m117a_ordr,
+						m117b_ordr,
+						m117c_ordr,
+						m118_ordr,
+						h5_hz,
+						h4_hz,
+						h3_hz,
+						h2_hz,
+						h1_hz
+					FROM st_intelligent_schema.optmz_cntr_pump
+					where mark = 'P' order by recd_dt desc limit 1
+	</select>
+
+	<select id="select_optmz_cntr_data_denipho" resultType="mone.db.dto.PostgresResDTO$optmz_cntr_data" parameterType="java.util.Map">
+
+		SELECT 						optmz_cntr_denipho_id,
+							flag 			as 	denipho_flag,
+							TO_CHAR(recd_dt , 'YYYY-MM-DD HH24:MI:SS') 		as 	denipho_recd_dt,
+							mark 			as 	denipho_mark,
+							fclt_knd 		as 	denipho_fclt_knd,
+							stng_val 		as 	denipho_stng_val
+					FROM st_intelligent_schema.optmz_cntr_denipho
+					where mark  = 'P' order by recd_dt desc limit 1
+	</select>
+
+	<select id="select_optmz_cntr_data_psbr" resultType="mone.db.dto.PostgresResDTO$optmz_cntr_data" parameterType="java.util.Map">
+
+		SELECT 						optmz_cntr_psbr_id,
+							flag 			as 	psbr_flag,
+							TO_CHAR(recd_dt , 'YYYY-MM-DD HH24:MI:SS') 		as	psbr_recd_dt,
+							mark 			as 	psbr_mark,
+						 	m1002a_optmz	as	m1002a_optmz,
+							m1002b_optmz	as  m1002b_optmz,
+							pm1009a_optmz	as  pm1009a_optmz,
+							pm1009b_optmz	as  pm1009b_optmz
+					FROM st_intelligent_schema.optmz_cntr_psbr
+					where mark  = 'P'  order by recd_dt desc limit 1
+	</select>
+
+	<select id="select_optmz_cntr_data_pac" resultType="mone.db.dto.PostgresResDTO$optmz_cntr_data" parameterType="java.util.Map">
+
+		SELECT 						optmz_cntr_pac_id,
+							flag 			as 	pac_flag,
+							TO_CHAR(recd_dt , 'YYYY-MM-DD HH24:MI:SS') 		as 	pac_recd_dt,
+							mark 			as 	pac_mark,
+							fclt_knd 		as 	pac_fclt_knd,
+							stng_val 		as 	pac_stng_val
+					FROM st_intelligent_schema.optmz_cntr_pac
+					where mark  = 'P'  order by recd_dt desc limit 1
+	</select>
+
+	<select id="select_optmz_cntr_data_mlss" resultType="mone.db.dto.PostgresResDTO$optmz_cntr_data" parameterType="java.util.Map">
+
+		SELECT 						optmz_cntr_mlss_id,
+							flag 			as	mlss_flag,
+							TO_CHAR(recd_dt , 'YYYY-MM-DD HH24:MI:SS') 		as 	mlss_recd_dt,
+							mark 			as 	mlss_mark,
+							open_stng_val	as	mlss_open_stng_val,
+							close_stng_val	as	mlss_close_stng_val
+					FROM st_intelligent_schema.optmz_cntr_mlss
+					where mark  = 'P' order by recd_dt desc limit 1
+	</select>
+
+</mapper>

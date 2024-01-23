@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <properties resource="config/config.properties"/>
+    <settings>
+        <setting name="jdbcTypeForNull" value="NULL" />
+        <setting name="callSettersOnNulls" value="true"/>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+    </settings>
+    <environments default="development">
+        <environment id="development">
+            <transactionManager type="JDBC"/>
+           	<dataSource type="POOLED">
+               	<property name="driver" 	value="${maria.db.driver}" />
+               	<property name="url"		value="${maria.db.url}" />
+               	<property name="username" 	value="${maria.db.id}" />
+               	<property name="password" 	value="${maria.db.pwd}" />
+           	</dataSource>
+        </environment>
+    </environments>
+    <mappers>
+        <mapper resource="config/sql-maria.xml" />
+    </mappers>
+</configuration>
